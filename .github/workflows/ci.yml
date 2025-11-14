@@ -45,6 +45,8 @@ jobs:
       run: just lint
     - name: Test
       run: just test
+      env:
+        OP_TOKEN: ${{ secrets.OP_TOKEN }}
     - name: Scan
       uses: SonarSource/sonarqube-scan-action@master
       env:
