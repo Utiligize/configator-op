@@ -82,7 +82,8 @@ class PostgresConfig(ConfigatorSettings):
 
 class SentryConfig(ConfigatorSettings):
     """Sentry configuration schema."""
-    model_config = SettingsConfigDict(env_prefix='SENTRY_')
+
+    model_config = SettingsConfigDict(env_prefix="SENTRY_")
 
     dsn: HttpUrl
     enabled: bool = True
