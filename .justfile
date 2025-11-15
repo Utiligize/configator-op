@@ -14,15 +14,21 @@ is-clean:
 
 # Lint the project
 lint:
+  uv run python -m ruff format {{justfile_directory()}}/src
+  uv run python -m ruff check {{justfile_directory()}}/src
+  cd {{justfile_directory()}}/src && uv run python -m mypy -p configator --config-file {{justfile_directory()}}/pyproject.toml
+
+# Lint the project for the CI pipeline
+lint-ci:
   #!/usr/bin/env bash
   EXIT_STATUS=0
-  uv run python -m ruff format {{justfile_directory()}}/src || EXIT_STATUS=$?
+  uv run python -m ruff format --check {{justfile_directory()}}/src || EXIT_STATUS=$?
   uv run python -m ruff check {{justfile_directory()}}/src || EXIT_STATUS=$?
   cd {{justfile_directory()}}/src && uv run python -m mypy -p configator --config-file {{justfile_directory()}}/pyproject.toml || EXIT_STATUS=$?
   exit $EXIT_STATUS
 
-# Run auto fix for the Ruff linter
-lint-auto-fix:
+# Let Ruff auto-fix what it can
+lint-fix:
   uv run python -m ruff check --fix {{justfile_directory()}}/src
 
 # Sync dependencies
