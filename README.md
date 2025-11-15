@@ -47,6 +47,24 @@ async def main():
 asyncio.run(main())
 ```
 
+### Developer Mode
+
+For local development, you can override configuration values using a `.env` file by setting the `CONFIGATOR_DEV_MODE` environment variable:
+
+```bash
+export CONFIGATOR_DEV_MODE=1
+```
+
+When developer mode is enabled, values are loaded with the following priority (highest to lowest):
+
+1. `.env` file
+2. Environment variables
+3. 1Password values (via initialization parameters)
+
+Without developer mode, the standard priority applies (1Password values take precedence over environment variables and .env files).
+
+This feature works with the provided common configuration models (`PostgresConfig`, `SentryConfig`). For your own config schemas, you can simply extend `ConfigatorSettings` to get this behavior.
+
 ## Installation
 
 ```bash

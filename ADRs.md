@@ -13,6 +13,7 @@
 - [ADR-008: Implement special boolean parsing from strings](#adr-008-implement-special-boolean-parsing-from-strings)
 - [ADR-009: Provide minimal public API surface](#adr-009-provide-minimal-public-api-surface)
 - [ADR-010: Provide common configuration models as mixins](#adr-010-provide-common-configuration-models-as-mixins)
+- [ADR-011: Support developer mode with .env file priority](#adr-011-support-developer-mode-with-env-file-priority)
 
 ## ADR-001: Use Structlog for logging
 
@@ -390,3 +391,59 @@ These can be used directly or composed into larger configurations via nesting.
   - Reduced boilerplate: Don't rewrite database config for every project.
   - Learning curve: Developers must understand provided models.
   - Easy to extend: Inherit and add fields as needed for project-specific requirements.
+
+## ADR-011: Support developer mode with .env file priority
+
+**Date:** 2025-11-15
+
+**Context:**
+
+During local development, developers need to test configuration changes without modifying 1Password items. Pydantic Settings supports loading values from multiple sources (.env files, environment variables, initialization parameters) but with a fixed priority order. We need a way to prioritize local .env files during development while maintaining production behavior by default.
+
+**Decision:**
+
+Introduce a `ConfigatorSettings` base class that extends `pydantic_settings.BaseSettings` and customizes the settings source priority based on the `CONFIGATOR_DEV_MODE` environment variable. When this variable is set to any non-empty value, the priority changes to:
+
+1. .env files (highest priority)
+2. Environment variables
+3. Initialization parameters
+4. File secrets (lowest priority)
+
+Without developer mode (default), the standard priority is maintained:
+
+1. Initialization parameters (highest priority)
+2. Environment variables
+3. .env files
+4. File secrets (lowest priority)
+
+All common configuration models (`PostgresConfig`, `SentryConfig`) extend `ConfigatorSettings` to inherit this behavior.
+
+**Consequences:**
+
+- Benefits
+  - Local development: Developers can override configuration values using a .env file without touching 1Password.
+  - Safe defaults: Production behavior unchanged unless developer mode explicitly enabled.
+  - Explicit control: Clear environment variable signals developer mode activation.
+  - Standard workflow: Follows common practice of using .env files for local development.
+  - Visibility: Logs a warning message when developer mode is enabled/disabled for awareness.
+  - Flexible testing: Easy to test different configuration values without modifying actual secrets.
+
+- Costs / Trade-offs
+  - Additional complexity: Two different priority modes to understand and document.
+  - Potential confusion: Developers must remember to enable developer mode and understand priority changes.
+  - pydantic-settings dependency: Adds pydantic-settings as a required dependency.
+  - Mode indicator noise: Warning log on every instantiation (though useful for awareness).
+  - Not applicable to core loading: Only works with provided common models, not custom BaseModel schemas.
+
+- Operational considerations
+  - .env files should never be committed to version control (add to .gitignore).
+  - Developer mode should never be enabled in production environments.
+  - Teams should document when and how to use developer mode in development guides.
+  - .env file format must match pydantic-settings expectations (KEY=value).
+
+- Developer impact
+  - Convenient local development: Test configuration changes without 1Password access.
+  - Clear mode switching: Single environment variable controls behavior.
+  - Must understand priority: Know which source wins in each mode.
+  - Explicit opt-in: Developer mode must be deliberately enabled.
+  - Standard patterns: Follows familiar .env file conventions from other frameworks.
