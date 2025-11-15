@@ -3,10 +3,41 @@
 from enum import StrEnum, unique
 from os import getenv
 
-from pydantic import BaseModel, ConfigDict, Field, PostgresDsn, SecretStr
+from pydantic import Field, HttpUrl, PostgresDsn, SecretStr
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 from structlog import get_logger
 
 log = get_logger()
+
+
+class ConfigatorSettings(BaseSettings):
+    """Base configuration schema for Configator.
+
+    If "developer mode" is activated by setting the environment value
+    `CONFIGATOR_DEV_MODE` to a non-empty value, prefer loading values
+    from .env file first, then from environment variables, then from
+    init kwargs. Otherwise, keep normal loading priority.
+
+    To learn more about what is going on here, read
+    <https://docs.pydantic.dev/latest/concepts/pydantic_settings/#customise-settings-sources>
+    """
+
+    model_config = SettingsConfigDict(use_enum_values=True)
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        dev_mode = getenv("CONFIGATOR_DEV_MODE", None)
+        log.warning("configator developer mode is %s", "ENABLED" if dev_mode else "disabled")
+        if dev_mode:
+            return dotenv_settings, env_settings, init_settings, file_secret_settings
+        return init_settings, env_settings, dotenv_settings, file_secret_settings
 
 
 @unique
@@ -17,7 +48,7 @@ class Environment(StrEnum):
 
 
 @unique
-class PostgresSSLMode(StrEnum):
+class _PostgresSSLMode(StrEnum):
     DISABLE = "disable"
     ALLOW = "allow"
     PREFER = "prefer"
@@ -25,41 +56,35 @@ class PostgresSSLMode(StrEnum):
     VERIFY_CA = "verify-ca"
     VERIFY_FULL = "verify-full"
 
-    @classmethod
-    def from_env(cls) -> "PostgresSSLMode":
-        """Create PostgresSSLMode based on environment variable PGSSLMODE."""
-        env_val = getenv("PGSSLMODE", "prefer")
-        try:
-            self = cls(env_val)
-        except ValueError:
-            log.warning(f"invalid SSL mode, falling back to `prefer`: PGSSLMODE={env_val}")
-            self = cls("prefer")
-        return self
 
-
-class PostgresConfig(BaseModel):
+class PostgresConfig(ConfigatorSettings):
     """PostgreSQL configuration schema."""
 
-    model_config = ConfigDict(use_enum_values=True)
-
-    host: str = getenv("PGHOST", "localhost")
-    port: int = int(getenv("PGPORT", 5432))
-    user: str = getenv("PGUSER", "postgres")
-    password: SecretStr = SecretStr(getenv("PGPASSWORD", "hunter2"))
-    database: str = getenv("PGDATABASE", "postgres")
-    sslmode: PostgresSSLMode = PostgresSSLMode.from_env()
+    PGHOST: str = "localhost"
+    PGPORT: int = 5432
+    PGUSER: str = "postgres"
+    PGPASSWORD: SecretStr = SecretStr("hunter2")
+    PGDATABASE: str = "postgres"
+    PGSSLMODE: _PostgresSSLMode = _PostgresSSLMode("prefer")
 
     def dsn(self) -> PostgresDsn:
-        """Get the PostgreSQL DSN string."""
-        return PostgresDsn(
-            f"postgresql://{self.user}:{self.password.get_secret_value()}"
-            f"@{self.host}:{self.port}/{self.database}?sslmode={self.sslmode}"
+        """Build the PostgreSQL DSN string."""
+        return PostgresDsn.build(
+            scheme="postgresql",
+            username=self.PGUSER,
+            password=self.PGPASSWORD.get_secret_value(),
+            host=self.PGHOST,
+            port=self.PGPORT,
+            path=f"{self.PGDATABASE}",
+            query=f"sslmode={self.PGSSLMODE}",
         )
 
 
-class SentryConfig(BaseModel):
+class SentryConfig(ConfigatorSettings):
     """Sentry configuration schema."""
+    model_config = SettingsConfigDict(env_prefix='SENTRY_')
 
-    dsn: SecretStr
+    dsn: HttpUrl
+    enabled: bool = True
     send_default_pii: bool = False
     traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
