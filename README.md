@@ -61,6 +61,8 @@ uv pip install "git+https://github.com/Utiligize/configator"
 
 For information on how to authenticate uv with GitHub, see <https://docs.astral.sh/uv/concepts/authentication/git/>.
 
+For information on how to use private repos in GitHub Actions, see <https://docs.astral.sh/uv/guides/integration/github/#private-repos>
+
 ## Writing Config Classes
 
 Define your app's config as a class deriving from Pydantic's `BaseModel`. The field names will be matched against the 1Password item field titles, and the values loaded from them. The field names are treated as lower snake case, and item field names in 1Password are converted accordingly when matching. For example, a Python model with a field called `sentry_key` will match a 1Password item with a field title of `SENTRY_KEY` or `sentry-key`. It is therefore important to ensure that field names are unique, at least within sections.
@@ -84,6 +86,15 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
 
 ### Unsupported Features
 
+- `Optional` and `Union` fields are **not** supported, i.e. you cannot do either of
+
+  ```python
+  foo: str | None = None
+  bar: Optional[str]
+  baz: int | float
+  ```
+
+  because it confuses the hydrator, who won't know which constructor to call or will try to initialize `None`.
 - While `default` values are supported, `default_factory` is not.
 - Basic Python types `bytes` and `bytearray` may work but are not officially supported.
 - Arbitrary JSON is not supported, but you may be able to `loads` it from a string. Caveat emptor.
