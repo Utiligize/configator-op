@@ -107,7 +107,6 @@ async def _hydrate_field(
         ret_val = default
         try:
             str_val = await _resolve_op_link(op_client, next(filter(matcher, wet_fields)).value)
-            print(f"{cls=}, {str_val=}")
             if issubclass(cls, (dict, list, set, tuple)):
                 ret_val = cls(loads(str_val))
             elif issubclass(cls, bool):
@@ -122,7 +121,6 @@ async def _hydrate_field(
                 log.error("field '%s' not found and no default value provided", key)
                 raise
             log.debug("using default value for field '%s'", key)
-        print(f"{key=}, {ret_val=}")
         return ret_val
 
 
