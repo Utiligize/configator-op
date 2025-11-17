@@ -95,15 +95,16 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
   - "true", "1", "yes", and "on" are interpreted as `True`.
   - "false", "0", "no", and "off" are interpreted as `False`.
   - any other value for a field defined as `bool` will raise a `ValueError`.
+- Collections (`dict`, `list`, `set`) are loaded by interpreting the string value in 1Password as JSON and passing that object to the constructor. This means that a set can be constructed from what looks like a list, for example.
 - Any string starting with `op://` will be resolved recursively (up to a depth of 10 links).
 
 ### Planned Features
 
-- Collections (`list`, `tuple`, `set`, `dict`) are yet to be implemented.
 - Providing access to extra fields in the config item when `model_config = ConfigDict(extra='allow')` is specified in the input model. See <https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.extra>.
 
 ### Unsupported Features
 
+- Typed collections are sadly not supported, because it confuses the `issubclass` matching of fields. This means that fields in your config model must be defined as e.g. plain `dict`, not `dict[str, str]`.
 - `Optional` and `Union` fields are **not** supported, i.e. you cannot do either of
 
   ```python
