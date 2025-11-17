@@ -34,10 +34,13 @@ class ConfigatorSettings(BaseSettings):
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         dev_mode = getenv("CONFIGATOR_DEV_MODE", None)
-        log.warning("configator developer mode is %s", "ENABLED" if dev_mode else "disabled")
+        log_msg = "configator developer mode is %s"
         if dev_mode:
+            log.warning(log_msg, "ENABLED")
             return dotenv_settings, env_settings, init_settings, file_secret_settings
-        return init_settings, env_settings, dotenv_settings, file_secret_settings
+        else:
+            log.debug(log_msg, "disabled")
+            return init_settings, env_settings, dotenv_settings, file_secret_settings
 
 
 @unique
