@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-…
+- feat: export `ConfigatorSettings` at top level through `__init__.py` (7569cb8)
 
 ### Changed
 
@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Removed
 
-...
+- fix: remove `print` debug statements from core._hydrate_field (5ddbe83)
 
 ## [3000.0.0] - 2025-11-16
 
