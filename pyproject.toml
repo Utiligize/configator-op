@@ -1,6 +1,6 @@
 [project]
 name = "configator"
-version = "3000.0.1"
+version = "3000.0.2"
 description = "Load config values from 1Password with this module."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["setuptools>=42"]
+requires = ["setuptools>=70", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.coverage.run]
