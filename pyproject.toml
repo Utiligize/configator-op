@@ -2,6 +2,15 @@
 name = "configator"
 version = "3000.1.0"
 description = "Load config values from 1Password with this module."
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Security",
+  "Topic :: Software Development :: Libraries",
+]
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
