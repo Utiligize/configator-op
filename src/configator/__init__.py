@@ -8,6 +8,7 @@
 from importlib.metadata import version
 
 from configator.core import load_config
+from configator.log import configure_logging
 from configator.models import ConfigatorSettings, Environment, PostgresConfig, SentryConfig
 
 __maintainer__ = "kthy"
@@ -20,5 +21,6 @@ __all__ = [
     "SentryConfig",
     "__maintainer__",
     "__version__",
+    "configure_logging",
     "load_config",
 ]

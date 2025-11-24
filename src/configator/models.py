@@ -12,7 +12,8 @@ from os import getenv
 
 from pydantic import Field, HttpUrl, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
-from structlog import get_logger
+
+from .log import get_logger
 
 log = get_logger()
 

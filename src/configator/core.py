@@ -16,11 +16,12 @@ from onepassword.client import Client as OnePasswordClient
 from onepassword.types import Item, ItemField, ItemOverview, VaultOverview
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
-from structlog import get_logger
 
-log = get_logger()
+from .log import get_logger
 
 T = TypeVar("T", bound=BaseModel)
+
+log = get_logger()
 
 
 async def load_config(*, token: str, vault: str, item: str, schema: type[T]) -> T:
