@@ -1,7 +1,7 @@
 # ![Configator logo depicting a cool gator](configator.png)
 
 <!-- markdownlint-disable MD036 -->
-*A convenient way to load your app configuration from 1Password*
+*A convenient way to load your app configuration from 1Password.*
 <!-- markdownlint-enable MD036 -->
 
 [![Ruff][ruff-badge-img]][ruff-badge-href]
@@ -9,6 +9,8 @@
 [![Quality Gate Status][sonarcloud-quality-badge-img]][sonarcloud-badge-href]
 [![Test Coverage][sonarcloud-cov-badge-img]][sonarcloud-badge-href]
 [![Lines of Code][sonarcloud-loc-badge-img]][sonarcloud-badge-href]
+
+This project is licensed under the terms of the MIT license.
 
 ## Quick Start
 

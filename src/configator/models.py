@@ -1,5 +1,12 @@
 """Common models that can be used as mixins or base config classes."""
 
+###################################################################################################
+# Copyright (c) 2025 Utiligize ApS <contact@utiligize.com>                                        #
+# This file is part of Configator: <https://github.com/Utiligize/configator>                      #
+# SPDX-License-Identifier: MIT                                                                    #
+# License-Filename: LICENSE.md                                                                    #
+###################################################################################################
+
 from enum import StrEnum, unique
 from os import getenv
 

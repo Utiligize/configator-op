@@ -1,3 +1,10 @@
+###################################################################################################
+# Copyright (c) 2025 Utiligize ApS <contact@utiligize.com>                                        #
+# This file is part of Configator: <https://github.com/Utiligize/configator>                      #
+# SPDX-License-Identifier: MIT                                                                    #
+# License-Filename: LICENSE.md                                                                    #
+###################################################################################################
+
 from importlib.metadata import version
 
 from configator.core import load_config

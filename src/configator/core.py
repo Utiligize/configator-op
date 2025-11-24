@@ -1,5 +1,12 @@
 """Main module for Configator."""
 
+###################################################################################################
+# Copyright (c) 2025 Utiligize ApS <contact@utiligize.com>                                        #
+# This file is part of Configator: <https://github.com/Utiligize/configator>                      #
+# SPDX-License-Identifier: MIT                                                                    #
+# License-Filename: LICENSE.md                                                                    #
+###################################################################################################
+
 from functools import partial
 from importlib.metadata import version
 from json import JSONDecodeError, loads

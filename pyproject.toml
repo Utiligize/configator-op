@@ -2,6 +2,8 @@
 name = "configator"
 version = "3000.1.1"
 description = "Load config values from 1Password with this module."
+authors = [{name = "Utiligize ApS", email = "contact@utiligize.com"}]
+maintainers = [{name = "Kristian Thy", email = "kthy@utiligize.com"}]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
@@ -10,7 +12,9 @@ classifiers = [
   "Topic :: Security",
   "Topic :: Software Development :: Libraries",
 ]
+keywords = ["1password", "configuration", "settings", "pydantic"]
 license = "MIT"
+license-files = ["LICENSE.md"]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -19,6 +23,11 @@ dependencies = [
   "pydantic>=2",
   "structlog>=25",
 ]
+
+[project.urls]
+Repository = "https://github.com/Utiligize/configator"
+Issues = "https://github.com/Utiligize/configator/issues"
+Changelog = "https://github.com/Utiligize/configator/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["setuptools>=70", "wheel"]
@@ -43,7 +52,6 @@ warn_unused_configs = true
 [[tool.mypy.overrides]]
 module = [
   "onepassword.*",
-  "sorcery",
 ]
 ignore_missing_imports = true
 
@@ -58,7 +66,6 @@ executionEnvironments = [
 minversion = "9.0"
 filterwarnings = [
   "error",
-  "ignore:Deprecated call to `pkg_resources.declare_namespace:DeprecationWarning",
 ]
 addopts = "--cov-branch --cov-report xml:coverage.xml --cov-report term-missing:skip-covered --cov=src/configator"
 testpaths = [
