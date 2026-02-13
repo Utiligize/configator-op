@@ -390,9 +390,7 @@ async def test_hydrate_model_simple(mock_op_client):
                 value="test",
                 sectionId=None,
             ),
-            ItemField(
-                id="f2", title="field-two", fieldType="Text", value="42", sectionId=None
-            ),
+            ItemField(id="f2", title="field-two", fieldType="Text", value="42", sectionId=None),
         ],
         sections=[],
         notes="",
@@ -431,7 +429,9 @@ async def test_hydrate_model_with_bool(mock_op_client):
         updatedAt="2024-01-01T00:00:00Z",
     )
     mock_op_client.secrets.resolve.side_effect = lambda x: x
-    result = await _hydrate_model(op_client=mock_op_client, schema=SectionConfig, item=item, section_id="sec1")
+    result = await _hydrate_model(
+        op_client=mock_op_client, schema=SectionConfig, item=item, section_id="sec1"
+    )
     assert result.debug is True
     assert result.timeout == 30
 
@@ -452,12 +452,8 @@ async def test_hydrate_model_with_default_value(mock_op_client):
                 value="value",
                 sectionId=None,
             ),
-            ItemField(
-                id="f2", title="debug", fieldType="Text", value="false", sectionId="sec1"
-            ),
-            ItemField(
-                id="f3", title="timeout", fieldType="Text", value="60", sectionId="sec1"
-            ),
+            ItemField(id="f2", title="debug", fieldType="Text", value="false", sectionId="sec1"),
+            ItemField(id="f3", title="timeout", fieldType="Text", value="60", sectionId="sec1"),
         ],
         sections=[ItemSection(id="sec1", title="Section")],
         notes="",
@@ -524,9 +520,7 @@ async def test_hydrate_model_with_op_link(mock_op_client):
                 value="op://vault/item/field",
                 sectionId=None,
             ),
-            ItemField(
-                id="f2", title="field-two", fieldType="Text", value="42", sectionId=None
-            ),
+            ItemField(id="f2", title="field-two", fieldType="Text", value="42", sectionId=None),
         ],
         sections=[],
         notes="",
@@ -555,12 +549,8 @@ async def test_hydrate_model_nested_sections(mock_op_client):
             ItemField(
                 id="f1", title="simple-field", fieldType="Text", value="test", sectionId=None
             ),
-            ItemField(
-                id="f2", title="debug", fieldType="Text", value="yes", sectionId="sec1"
-            ),
-            ItemField(
-                id="f3", title="timeout", fieldType="Text", value="100", sectionId="sec1"
-            ),
+            ItemField(id="f2", title="debug", fieldType="Text", value="yes", sectionId="sec1"),
+            ItemField(id="f3", title="timeout", fieldType="Text", value="100", sectionId="sec1"),
         ],
         sections=[ItemSection(id="sec1", title="Section")],
         notes="",
@@ -596,9 +586,7 @@ async def test_load_config_success(mock_op_client, mock_vault, mock_item_overvie
                 value="test_value",
                 sectionId=None,
             ),
-            ItemField(
-                id="f2", title="field-two", fieldType="Text", value="123", sectionId=None
-            ),
+            ItemField(id="f2", title="field-two", fieldType="Text", value="123", sectionId=None),
         ],
         sections=[],
         notes="",
@@ -647,9 +635,7 @@ async def test_load_config_item_not_found(mock_op_client, mock_vault):
         mock_op_client.vaults.list.return_value = [mock_vault]
         mock_op_client.items.list.return_value = []
 
-        with raises(
-            RuntimeError, match="item 'NonExistentItem' not found in vault TestVault"
-        ):
+        with raises(RuntimeError, match="item 'NonExistentItem' not found in vault TestVault"):
             await load_config(
                 token="test_token",
                 vault="TestVault",
@@ -674,12 +660,8 @@ async def test_load_config_complex_schema(mock_op_client, mock_vault, mock_item_
                 value="simple",
                 sectionId=None,
             ),
-            ItemField(
-                id="f2", title="debug", fieldType="Text", value="on", sectionId="sec1"
-            ),
-            ItemField(
-                id="f3", title="timeout", fieldType="Text", value="200", sectionId="sec1"
-            ),
+            ItemField(id="f2", title="debug", fieldType="Text", value="on", sectionId="sec1"),
+            ItemField(id="f3", title="timeout", fieldType="Text", value="200", sectionId="sec1"),
             ItemField(
                 id="f4",
                 title="optional-field",
