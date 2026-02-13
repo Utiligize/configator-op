@@ -1,0 +1,10 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        1password/*: ref-pin
+        actions/*: ref-pin
+        astral-sh/*: ref-pin
+        docker/*: ref-pin
+        GitHubSecurityLab/*: ref-pin
+        SonarSource/*: ref-pin

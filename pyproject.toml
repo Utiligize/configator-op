@@ -1,6 +1,6 @@
 [project]
-name = "configator"
-version = "3000.2.0"
+name = "configator-op"
+version = "3000.3.0"
 description = "Load config values from 1Password with this module."
 authors = [{name = "Utiligize ApS", email = "contact@utiligize.com"}]
 maintainers = [{name = "Kristian Thy", email = "kthy@utiligize.com"}]
@@ -18,16 +18,16 @@ license-files = ["LICENSE.md"]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "onepassword-sdk>=0.3",
-  "pydantic-settings>=2.12",
-  "pydantic>=2",
-  "structlog>=25",
+  "onepassword-sdk>=0.3,<0.4",
+  "pydantic-settings>=2.12,<3",
+  "pydantic>=2,<3",
+  "structlog>=25,<26",
 ]
 
 [project.urls]
-Repository = "https://github.com/Utiligize/configator"
-Issues = "https://github.com/Utiligize/configator/issues"
-Changelog = "https://github.com/Utiligize/configator/blob/main/CHANGELOG.md"
+Repository = "https://github.com/Utiligize/configator-op"
+Issues = "https://github.com/Utiligize/configator-op/issues"
+Changelog = "https://github.com/Utiligize/configator-op/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["setuptools>=70", "wheel"]
@@ -86,6 +86,11 @@ select = ["A", "B", "C", "E", "F", "FBT", "I", "N", "RUF", "S"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["S101", "S106"]
+
+[tool.setuptools]
+packages = ["configator"]
+package-dir = {"" = "src"}
+package-data = {dotenv = ["py.typed"]}
 
 [dependency-groups]
 dev = [

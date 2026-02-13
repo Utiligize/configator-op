@@ -59,7 +59,10 @@ async def test_load_config():
             a_tuple=("hearts", "diamonds", "clubs", "spades", "hearts"),
         ),
         MIXIN=SentryConfig(dsn="https://this.url.is.invalid/"),
-        outside_sections="This value is just a string but it could be anything. Just like you. Believe in yourself. Worry not what others think. Buy that extra chunk of cheese.",
+        outside_sections=(
+            "This value is just a string but it could be anything. Just like you. "
+            "Believe in yourself. Worry not what others think. Buy that extra chunk of cheese."
+        ),
         not_set="default_value",
     )
 
