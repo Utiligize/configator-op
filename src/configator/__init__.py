@@ -12,7 +12,7 @@ from configator.log import configure_logging
 from configator.models import ConfigatorSettings, Environment, PostgresConfig, SentryConfig
 
 __maintainer__ = "kthy"
-__version__ = version("configator")
+__version__ = version("configator-op")
 
 __all__ = [
     "ConfigatorSettings",

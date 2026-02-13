@@ -8,6 +8,10 @@ set dotenv-load
   echo '$ source <(just --completions bash)'
   echo
 
+# Build wheels
+build: is-clean
+  uv build
+
 # Check whether the repo is clean
 is-clean:
   @[ -z "$(git status --porcelain)" ]

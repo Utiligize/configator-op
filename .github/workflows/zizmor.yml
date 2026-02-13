@@ -1,0 +1,47 @@
+name: GitHub Actions Static Security Scan
+
+on:
+  push:
+    branches:
+      - '*'
+    paths:
+      - '.github/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+
+jobs:
+  zizmor:
+    name: Zizmor Analysis
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout repo
+      uses: actions/checkout@v6
+      with:
+        show-progress: false
+        persist-credentials: false
+
+    - name: Install zizmor
+      run: pipx install zizmor
+
+    - name: Run zizmor
+      run: >
+        zizmor
+        --color=never
+        --config .zizmor.yml
+        --no-progress
+        --persona=auditor
+        --strict-collection
+        .github/

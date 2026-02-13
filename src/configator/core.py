@@ -49,7 +49,7 @@ def _field_matcher(field: ItemField, *, title: str, section_id: str | None = Non
 
 async def _get_client(token: str) -> OnePasswordClient:
     """Initialize 1Password client."""
-    pkg_name = __package__ or ""
+    pkg_name = "configator_op"
     pkg_version = version(pkg_name)
     log.debug("instantiating 1Password client (%s-%s)", pkg_name, pkg_version)
     op_client = await OnePasswordClient.authenticate(
