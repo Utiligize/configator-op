@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 …
 
+## [3000.2.2] - 2026-02-13
+
+### Changed
+
+- fix: tweak setuptools config after rename ([579567d])
+
 ## [3000.2.1] - 2026-02-12
 
 ### Added
@@ -78,7 +84,8 @@ Initial release.
 
 <!-- markdownlint-disable-file MD024 -->
 
-[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.2.1...HEAD
+[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.2.2...HEAD
+[3000.2.2]: https://github.com/Utiligize/configator-op/compare/v3000.2.1...v3000.2.2
 [3000.2.1]: https://github.com/Utiligize/configator-op/compare/v3000.2.0...v3000.2.1
 [3000.2.0]: https://github.com/Utiligize/configator-op/compare/v3000.1.1...v3000.2.0
 [3000.1.1]: https://github.com/Utiligize/configator-op/compare/v3000.1.0...v3000.1.1
@@ -90,6 +97,7 @@ Initial release.
 <!-- only slugs below here -->
 [2fbb13e]: https://github.com/Utiligize/configator-op/commit/2fbb13e9ab59dd72fce7f8d70cde51398d75f814
 [4de6b3e]: https://github.com/Utiligize/configator-op/commit/4de6b3e5bcc06d921f3c263dd692c5ecdf95762c
+[579567d]: https://github.com/Utiligize/configator-op/commit/579567d6bd872896f25d8f0b8f9e2773407bcb59
 [94d14ec]: https://github.com/Utiligize/configator-op/commit/94d14eccdec1257c717d4becae2b8e7f39a4add2
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d
 [e5a453a]: https://github.com/Utiligize/configator-op/commit/e5a453ac59fe11fbea083b9168289ef111424dc4
