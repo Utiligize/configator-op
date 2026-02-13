@@ -1,6 +1,6 @@
 [project]
 name = "configator-op"
-version = "3000.2.2"
+version = "3000.3.0"
 description = "Load config values from 1Password with this module."
 authors = [{name = "Utiligize ApS", email = "contact@utiligize.com"}]
 maintainers = [{name = "Kristian Thy", email = "kthy@utiligize.com"}]

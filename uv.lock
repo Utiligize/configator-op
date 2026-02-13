@@ -21,7 +21,7 @@ wheels = [
 
 [[package]]
 name = "configator-op"
-version = "3000.2.2"
+version = "3000.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "onepassword-sdk", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },

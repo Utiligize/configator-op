@@ -18,18 +18,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 …
 
-## [3000.2.2] - 2026-02-13
-
-### Changed
-
-- fix: tweak setuptools config after rename ([579567d])
-
-## [3000.2.1] - 2026-02-12
+## [3000.3.0] - 2026-02-13
 
 ### Added
 
 - chore: add build recipe ([4de6b3e])
 - ci: add zizmor action ([e5a453a])
+
+### Changed
+
+- chore: format test files ([])
+- fix: sort out package renaming for good … ([])
+- fix: tweak setuptools config after rename ([579567d])
+
+## [3000.2.2] - 2026-02-13
+
+**Release retracted** due to a defect rendering it non-functional.
+
+## [3000.2.1] - 2026-02-12
+
+**Release retracted** due to a defect rendering it non-functional.
 
 ### Changed
 
