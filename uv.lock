@@ -43,9 +43,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "onepassword-sdk", specifier = ">=0.3,<0.4" },
-    { name = "pydantic", specifier = ">=2" },
-    { name = "pydantic-settings", specifier = ">=2.12" },
-    { name = "structlog", specifier = ">=25" },
+    { name = "pydantic", specifier = ">=2,<3" },
+    { name = "pydantic-settings", specifier = ">=2.12,<3" },
+    { name = "structlog", specifier = ">=25,<26" },
 ]
 
 [package.metadata.requires-dev]

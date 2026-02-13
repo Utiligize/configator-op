@@ -158,7 +158,6 @@ def test_field_matcher_normalizes_field_name():
 
 
 # Tests for _get_client
-@mark.skip(reason="Fails for reasons I do not currently understand. /KThy")
 @mark.asyncio
 async def test_get_client():
     """Test client initialization."""
