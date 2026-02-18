@@ -35,6 +35,10 @@ lint-ci:
 lint-fix:
   uv run python -m ruff check --fix {{justfile_directory()}}/src
 
+# Publish built package to PyPI
+publish: build
+  uv run twine upload {{justfile_directory()}}/dist/*
+
 # Sync dependencies
 sync:
   uv sync

@@ -100,6 +100,7 @@ dev = [
   "pytest-cov>=3",
   "rich>=14",
   "ruff>=0.14",
+  "twine>=6",
 ]
 
 [tool.uv]
