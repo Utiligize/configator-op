@@ -1,0 +1,63 @@
+name: Skylos
+
+"on":
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Minimal top-level permissions; job-level permissions grant additional access
+permissions:
+  contents: read # required to checkout the repository
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  skylos:
+    name: Dead Code Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # required to checkout the repository
+      pull-requests: write # required for PR review comments
+      checks: write # required for GitHub annotations
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run Skylos Analysis
+        run: uv run skylos . --danger --quality --secrets --json -o skylos-results.json
+
+      - name: Quality Gate
+        if: always()
+        run: uv run skylos cicd gate --input skylos-results.json --summary
+        continue-on-error: true
+
+      - name: GitHub Annotations
+        if: always()
+        run: uv run skylos cicd annotate --input skylos-results.json
+
+      - name: PR Review Comments
+        if: github.event_name == 'pull_request' && always()
+        run: uv run skylos cicd review --input skylos-results.json --diff-base "origin/$DIFF_BASE"
+        env:
+          DIFF_BASE: ${{ github.base_ref || 'main' }}
+          GH_TOKEN: ${{ github.token }}
