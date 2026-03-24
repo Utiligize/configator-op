@@ -366,6 +366,14 @@ async def test_resolve_op_link_nested_links(mock_op_client):
 
 
 @mark.asyncio
+async def test_resolve_op_link_resolution_error(mock_op_client):
+    """Test resolving op:// link includes the reference in the error message."""
+    mock_op_client.secrets.resolve.side_effect = Exception("no vault matched the secret reference query")
+    with raises(RuntimeError, match="failed to resolve secret reference 'op://vault/item/field'"):
+        await _resolve_op_link(mock_op_client, "op://vault/item/field")
+
+
+@mark.asyncio
 async def test_resolve_op_link_too_deep(mock_op_client):
     """Test resolving op:// link with too many levels raises RuntimeError."""
     mock_op_client.secrets.resolve.return_value = "op://vault/item/field"

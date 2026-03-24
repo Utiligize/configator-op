@@ -179,7 +179,10 @@ async def _resolve_op_link(op_client: OnePasswordClient, link: str) -> str:
     # This counter is used to guard against circular op:// references
     moria_level = 0
     while link.startswith("op://"):
-        link = await op_client.secrets.resolve(link)
+        try:
+            link = await op_client.secrets.resolve(link)
+        except Exception as exc:
+            raise RuntimeError(f"failed to resolve secret reference '{link}'") from exc
         moria_level += 1
         if moria_level > 9:
             log.error("too many nested op:// references when resolving '%s'", link)
