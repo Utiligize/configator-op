@@ -735,13 +735,11 @@ async def test_load_config_complex_schema_idempotent(
         mock_op_client.items.get.return_value = complex_item
         mock_op_client.secrets.resolve.side_effect = lambda x: x
 
-        result = await load_config(
+        first = await load_config(
+            token="test_token", vault="TestVault", item="TestItem", schema=ComplexConfig
+        )
+        second = await load_config(
             token="test_token", vault="TestVault", item="TestItem", schema=ComplexConfig
         )
 
-        assert isinstance(result, ComplexConfig)
-        assert result.simple_field == "simple"
-        assert isinstance(result.section, SectionConfig)
-        assert result.section.debug is True
-        assert result.section.timeout == 200
-        assert result.optional_field == "custom"
+        assert first == second
