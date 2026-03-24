@@ -12,11 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- fix: include failed secret reference URI in resolution error message ([d5b1eda])
+- chore: update dependencies ([147834f])
 - ci: add skylos workflow ([6269c0b])
 - ci: harden zizmor config, add SHA pins ([76d4594])
-- chore: update dependencies ([147834f])
 - feat: allow onepassword-sdk-0.4 in dependencies ([01b9485])
+- fix: include failed secret reference URI in resolution error message ([d5b1eda])
+- fix: resolve Skylos quality and danger findings ([b3def03])
 - fix: update test fixture for onepassword-sdk 0.4 compatibility ([7880b48])
 
 ### Removed
@@ -110,6 +111,7 @@ Initial release.
 [01b9485]: https://github.com/Utiligize/configator-op/commit/01b9485654832e82861cc8c7a390cc190f38daf4
 [0ddc16a]: https://github.com/Utiligize/configator-op/commit/0ddc16ac3e8e0637137bf93146630198215d6546
 [147834f]: https://github.com/Utiligize/configator-op/commit/147834f243868ecfe27152aad4251982b4755dbd
+[b3def03]: https://github.com/Utiligize/configator-op/commit/b3def038d61c38f7e14cc33334da9293c64ed168
 [2fbb13e]: https://github.com/Utiligize/configator-op/commit/2fbb13e9ab59dd72fce7f8d70cde51398d75f814
 [4de6b3e]: https://github.com/Utiligize/configator-op/commit/4de6b3e5bcc06d921f3c263dd692c5ecdf95762c
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f

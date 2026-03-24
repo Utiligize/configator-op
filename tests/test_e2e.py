@@ -15,34 +15,33 @@ from configator.models import SentryConfig
 OP_TOKEN = getenv("OP_TOKEN")
 
 
+class ValuesConfig(BaseModel):
+    a_string: str
+    an_integer: int
+    a_reference: str
+    a_complex: complex
+    a_decimal: Decimal
+    a_float: float
+    a_bool: bool
+    another_bool: bool
+    a_dict: dict
+    a_list: list
+    a_set: set
+    a_tuple: tuple
+
+
+class E2ETestConfig(BaseModel):
+    """Full end-to-end test configuration schema."""
+
+    VALUES: ValuesConfig
+    MIXIN: SentryConfig
+    outside_sections: str = "overridden_default_value"
+    not_set: str = "default_value"
+
+
 @mark.skipif(OP_TOKEN is None, reason="no 1Password token provided")
 @mark.asyncio
 async def test_load_config():
-    class ValuesConfig(BaseModel):
-        a_string: str
-        an_integer: int
-        a_reference: str
-        a_complex: complex
-        a_decimal: Decimal
-        a_float: float
-        a_bool: bool
-        another_bool: bool
-        a_dict: dict
-        a_list: list
-        a_set: set
-        a_tuple: tuple
-
-    class E2ETestConfig(BaseModel):
-        """Full end-to-end test configuration schema."""
-
-        VALUES: ValuesConfig
-        MIXIN: SentryConfig
-        outside_sections: str = "overridden_default_value"
-        not_set: str = "default_value"
-
-    vault = "REPO configator"
-    item = "configator-test-e2e"
-
     expected_config = E2ETestConfig(
         VALUES=ValuesConfig(
             a_string="foo",
@@ -69,8 +68,8 @@ async def test_load_config():
     actual_config: E2ETestConfig = await load_config(
         schema=E2ETestConfig,
         token=OP_TOKEN,
-        vault=vault,
-        item=item,
+        vault="REPO configator",
+        item="configator-test-e2e",
     )
 
     assert actual_config == expected_config

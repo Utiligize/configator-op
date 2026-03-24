@@ -664,10 +664,10 @@ async def test_load_config_item_not_found(mock_op_client, mock_vault):
             )
 
 
-@mark.asyncio
-async def test_load_config_complex_schema(mock_op_client, mock_vault, mock_item_overview):
-    """Test config loading with complex nested schema."""
-    item = Item(
+@fixture
+def complex_item():
+    """Mock Item with fields for ComplexConfig."""
+    return Item(
         id="item456",
         title="TestItem",
         vaultId="vault123",
@@ -700,10 +700,16 @@ async def test_load_config_complex_schema(mock_op_client, mock_vault, mock_item_
         updatedAt="2024-01-01T00:00:00Z",
     )
 
+
+@mark.asyncio
+async def test_load_config_complex_schema(
+    mock_op_client, mock_vault, mock_item_overview, complex_item
+):
+    """Test config loading with complex nested schema."""
     with patch("configator.core._get_client", return_value=mock_op_client):
         mock_op_client.vaults.list.return_value = [mock_vault]
         mock_op_client.items.list.return_value = [mock_item_overview]
-        mock_op_client.items.get.return_value = item
+        mock_op_client.items.get.return_value = complex_item
         mock_op_client.secrets.resolve.side_effect = lambda x: x
 
         result = await load_config(
@@ -717,10 +723,16 @@ async def test_load_config_complex_schema(mock_op_client, mock_vault, mock_item_
         assert result.section.timeout == 200
         assert result.optional_field == "custom"
 
+
+@mark.asyncio
+async def test_load_config_complex_schema_idempotent(
+    mock_op_client, mock_vault, mock_item_overview, complex_item
+):
+    """Test that loading complex schema twice yields the same result."""
     with patch("configator.core._get_client", return_value=mock_op_client):
         mock_op_client.vaults.list.return_value = [mock_vault]
         mock_op_client.items.list.return_value = [mock_item_overview]
-        mock_op_client.items.get.return_value = item
+        mock_op_client.items.get.return_value = complex_item
         mock_op_client.secrets.resolve.side_effect = lambda x: x
 
         result = await load_config(

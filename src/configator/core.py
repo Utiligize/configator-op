@@ -15,7 +15,7 @@ from typing import Any
 from onepassword.client import Client as OnePasswordClient
 from onepassword.types import Item, ItemField, ItemOverview, VaultOverview
 from pydantic import BaseModel
-from pydantic_core import PydanticUndefined
+from pydantic.fields import PydanticUndefined
 
 from .log import get_logger
 
