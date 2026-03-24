@@ -3,6 +3,12 @@
 from unittest.mock import AsyncMock, patch
 
 from onepassword.types import Item, ItemField, ItemOverview, ItemSection, VaultOverview
+
+try:
+    from onepassword.types import VaultType
+except ImportError:
+    # onepassword-sdk<0.4
+    VaultType = None
 from pydantic import BaseModel
 from pytest import fixture, mark, raises
 
@@ -47,12 +53,18 @@ class ComplexConfig(BaseModel):
 @fixture
 def mock_vault():
     """Mock VaultOverview."""
-    return VaultOverview(
-        id="vault123",
-        title="TestVault",
-        createdAt="2024-01-01T00:00:00Z",
-        updatedAt="2024-01-01T00:00:00Z",
-    )
+    kwargs = {"id": "vault123", "title": "TestVault"}
+    if VaultType is not None:
+        kwargs.update(
+            description="",
+            vaultType=VaultType.USERCREATED,
+            activeItemCount=0,
+            contentVersion=1,
+            attributeVersion=1,
+            createdAt="2024-01-01T00:00:00Z",
+            updatedAt="2024-01-01T00:00:00Z",
+        )
+    return VaultOverview(**kwargs)
 
 
 @fixture
