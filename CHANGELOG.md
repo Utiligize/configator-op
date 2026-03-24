@@ -12,6 +12,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+…
+
+### Removed
+
+…
+
+## [3000.4.0] - 2026-03-24
+
+### Added
+
+- chore: add publish recipe ([03c114f])
+
+### Changed
+
+- chore: update .gitignore for IDE and agent directories ([d88b173])
 - chore: update dependencies ([147834f])
 - ci: add skylos workflow ([6269c0b])
 - ci: harden zizmor config, add SHA pins ([76d4594])
@@ -19,10 +34,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - fix: include failed secret reference URI in resolution error message ([d5b1eda])
 - fix: resolve Skylos quality and danger findings ([b3def03])
 - fix: update test fixture for onepassword-sdk 0.4 compatibility ([7880b48])
-
-### Removed
-
-…
 
 ## [3000.3.0] - 2026-02-13
 
@@ -98,7 +109,8 @@ Initial release.
 
 <!-- markdownlint-disable-file MD024 -->
 
-[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.3.0...HEAD
+[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.4.0...HEAD
+[3000.4.0]: https://github.com/Utiligize/configator-op/compare/v3000.3.0...v3000.4.0
 [3000.3.0]: https://github.com/Utiligize/configator-op/compare/v3000.2.0...v3000.3.0
 [3000.2.0]: https://github.com/Utiligize/configator-op/compare/v3000.1.1...v3000.2.0
 [3000.1.1]: https://github.com/Utiligize/configator-op/compare/v3000.1.0...v3000.1.1
@@ -109,9 +121,9 @@ Initial release.
 
 <!-- only slugs below here -->
 [01b9485]: https://github.com/Utiligize/configator-op/commit/01b9485654832e82861cc8c7a390cc190f38daf4
+[03c114f]: https://github.com/Utiligize/configator-op/commit/03c114f08b5d0249bf2dfa4ad068871c43e89afb
 [0ddc16a]: https://github.com/Utiligize/configator-op/commit/0ddc16ac3e8e0637137bf93146630198215d6546
 [147834f]: https://github.com/Utiligize/configator-op/commit/147834f243868ecfe27152aad4251982b4755dbd
-[b3def03]: https://github.com/Utiligize/configator-op/commit/b3def038d61c38f7e14cc33334da9293c64ed168
 [2fbb13e]: https://github.com/Utiligize/configator-op/commit/2fbb13e9ab59dd72fce7f8d70cde51398d75f814
 [4de6b3e]: https://github.com/Utiligize/configator-op/commit/4de6b3e5bcc06d921f3c263dd692c5ecdf95762c
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f
@@ -126,8 +138,10 @@ Initial release.
 [9688a7c]: https://github.com/Utiligize/configator-op/commit/9688a7c1da90d13ce2d54bd270ab6a7e3f3e5de1
 [973cbc0]: https://github.com/Utiligize/configator-op/commit/973cbc0a9a8b055c20a48c8992f15b7c7eed0fb6
 [981fc8f]: https://github.com/Utiligize/configator-op/commit/981fc8f4087cef661888e93bf8d147a085f04dc6
+[b3def03]: https://github.com/Utiligize/configator-op/commit/b3def038d61c38f7e14cc33334da9293c64ed168
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
+[d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953
 [e5a453a]: https://github.com/Utiligize/configator-op/commit/e5a453ac59fe11fbea083b9168289ef111424dc4
 [ed45385]: https://github.com/Utiligize/configator-op/commit/ed45385e514b42f2d0e86391cff416086e175ea4
 [f18dfe9]: https://github.com/Utiligize/configator-op/commit/f18dfe9db79c03fe90cc27535b764e2b55af5942
