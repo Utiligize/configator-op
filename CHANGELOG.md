@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - ci: add skylos workflow ([6269c0b])
 - ci: harden zizmor config, add SHA pins ([76d4594])
 - chore: update dependencies ([147834f])
+- feat: allow onepassword-sdk-0.4 in dependencies ([01b9485])
 
 ### Removed
 
@@ -104,6 +105,7 @@ Initial release.
 [3000.0.0]: https://github.com/Utiligize/configator-op/releases/tag/v3000.0.0
 
 <!-- only slugs below here -->
+[01b9485]: https://github.com/Utiligize/configator-op/commit/01b9485654832e82861cc8c7a390cc190f38daf4
 [0ddc16a]: https://github.com/Utiligize/configator-op/commit/0ddc16ac3e8e0637137bf93146630198215d6546
 [147834f]: https://github.com/Utiligize/configator-op/commit/147834f243868ecfe27152aad4251982b4755dbd
 [2fbb13e]: https://github.com/Utiligize/configator-op/commit/2fbb13e9ab59dd72fce7f8d70cde51398d75f814
