@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - fix: include failed secret reference URI in resolution error message ([d5b1eda])
+- ci: add skylos workflow ([6269c0b])
+- ci: harden zizmor config, add SHA pins ([76d4594])
+- chore: update dependencies ([147834f])
 
 ### Removed
 
@@ -103,13 +106,16 @@ Initial release.
 
 <!-- only slugs below here -->
 [0ddc16a]: https://github.com/Utiligize/configator-op/commit/0ddc16ac3e8e0637137bf93146630198215d6546
+[147834f]: https://github.com/Utiligize/configator-op/commit/147834f243868ecfe27152aad4251982b4755dbd
 [2fbb13e]: https://github.com/Utiligize/configator-op/commit/2fbb13e9ab59dd72fce7f8d70cde51398d75f814
 [4de6b3e]: https://github.com/Utiligize/configator-op/commit/4de6b3e5bcc06d921f3c263dd692c5ecdf95762c
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f
 [579567d]: https://github.com/Utiligize/configator-op/commit/579567d6bd872896f25d8f0b8f9e2773407bcb59
 [5ddbe83]: https://github.com/Utiligize/configator-op/commit/5ddbe839ddbb42fe72c1d5acffa2751ced5f967c
+[6269c0b]: https://github.com/Utiligize/configator-op/commit/6269c0bbedd9819b672c0df25698e1544b23196e
 [6df3acd]: https://github.com/Utiligize/configator-op/commit/6df3acdef891c6b60b90ea96c128b317956b1671
 [7569cb8]: https://github.com/Utiligize/configator-op/commit/7569cb8540028800570513411a5ab5291ab45cc6
+[76d4594]: https://github.com/Utiligize/configator-op/commit/76d459490bc57f3261ca5561b60dfb8768eb3c7c
 [94d14ec]: https://github.com/Utiligize/configator-op/commit/94d14eccdec1257c717d4becae2b8e7f39a4add2
 [9688a7c]: https://github.com/Utiligize/configator-op/commit/9688a7c1da90d13ce2d54bd270ab6a7e3f3e5de1
 [973cbc0]: https://github.com/Utiligize/configator-op/commit/973cbc0a9a8b055c20a48c8992f15b7c7eed0fb6
