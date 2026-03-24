@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: CI
 
 on:
   push:
@@ -27,28 +27,28 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.12", "3.13", "3.14"]
       fail-fast: false
-    name: CI Build - Python ${{ matrix.python-version }}
+    name: Build - Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
     steps:
 
     - name: Checkout repo
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       with:
         fetch-depth: 0  # Shallow clone disabled to improve Sonarcloud analysis
         show-progress: false
         persist-credentials: false
 
     - name: Install just
-      uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+      uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3.1.0
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
       with:
         enable-cache: true
         cache-dependency-glob: |
@@ -68,14 +68,14 @@ jobs:
     - name: Test
       run: just test
       env:
-        OP_TOKEN: ${{ secrets.OP_TOKEN }}
+        OP_TOKEN: ${{ secrets.OP_TOKEN }}  # zizmor: ignore[secrets-outside-env]
 
     - name: Scan
       if: ${{ matrix.python-version == '3.12' }}
-      uses: SonarSource/sonarqube-scan-action@master
+      uses: SonarSource/sonarqube-scan-action@a31c9398be7ace6bbfaf30c0bd5d415f843d45e9 # v7
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  # zizmor: ignore[secrets-outside-env]
 
     - name: Push scan results to DefectDojo
       if: ${{ matrix.python-version == '3.12' }}
@@ -96,4 +96,4 @@ jobs:
         -F 'push_to_jira=false' \
         -F 'create_finding_groups_for_all_findings=true'
       env:
-        DOJO_API_KEY: ${{ secrets.DOJO_API }}
+        DOJO_API_KEY: ${{ secrets.DOJO_API }}  # zizmor: ignore[secrets-outside-env]
