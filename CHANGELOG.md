@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-…
+- fix: include failed secret reference URI in resolution error message ([d5b1eda])
 
 ### Removed
 
