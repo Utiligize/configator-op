@@ -49,7 +49,6 @@ jobs:
       - name: Quality Gate
         if: always()
         run: uv run skylos cicd gate --input skylos-results.json --summary
-        continue-on-error: true
 
       - name: GitHub Annotations
         if: always()

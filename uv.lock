@@ -312,6 +312,13 @@ dependencies = [
     { name = "structlog", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
 ]
 
+[package.optional-dependencies]
+test = [
+    { name = "pytest", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
+    { name = "pytest-asyncio", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
+    { name = "pytest-cov", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "mypy", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
@@ -329,8 +336,12 @@ requires-dist = [
     { name = "onepassword-sdk", specifier = ">=0.3,<0.5" },
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "pydantic-settings", specifier = ">=2.12,<3" },
+    { name = "pytest", marker = "extra == 'test'" },
+    { name = "pytest-asyncio", marker = "extra == 'test'" },
+    { name = "pytest-cov", marker = "extra == 'test'" },
     { name = "structlog", specifier = ">=25,<26" },
 ]
+provides-extras = ["test"]
 
 [package.metadata.requires-dev]
 dev = [

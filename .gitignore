@@ -162,5 +162,5 @@ cython_debug/
 # IDEs and agents
 .claude
 .crush
+.skylos
 .vscode
-
