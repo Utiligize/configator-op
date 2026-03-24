@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - ci: harden zizmor config, add SHA pins ([76d4594])
 - chore: update dependencies ([147834f])
 - feat: allow onepassword-sdk-0.4 in dependencies ([01b9485])
+- fix: update test fixture for onepassword-sdk 0.4 compatibility ([7880b48])
 
 ### Removed
 
@@ -117,6 +118,7 @@ Initial release.
 [6df3acd]: https://github.com/Utiligize/configator-op/commit/6df3acdef891c6b60b90ea96c128b317956b1671
 [7569cb8]: https://github.com/Utiligize/configator-op/commit/7569cb8540028800570513411a5ab5291ab45cc6
 [76d4594]: https://github.com/Utiligize/configator-op/commit/76d459490bc57f3261ca5561b60dfb8768eb3c7c
+[7880b48]: https://github.com/Utiligize/configator-op/commit/7880b4823ff164718a2bc86627af810ac00daf82
 [94d14ec]: https://github.com/Utiligize/configator-op/commit/94d14eccdec1257c717d4becae2b8e7f39a4add2
 [9688a7c]: https://github.com/Utiligize/configator-op/commit/9688a7c1da90d13ce2d54bd270ab6a7e3f3e5de1
 [973cbc0]: https://github.com/Utiligize/configator-op/commit/973cbc0a9a8b055c20a48c8992f15b7c7eed0fb6
