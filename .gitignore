@@ -159,5 +159,8 @@ cython_debug/
 # SSL files
 *.pem
 
-# VS Code config
+# IDEs and agents
+.claude
+.crush
 .vscode
+
