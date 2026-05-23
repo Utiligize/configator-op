@@ -1358,7 +1358,7 @@ wheels = [
 
 [[package]]
 name = "skylos"
-version = "4.13.1"
+version = "4.18.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ca9", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
@@ -1380,9 +1380,9 @@ dependencies = [
     { name = "tree-sitter-rust", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
     { name = "tree-sitter-typescript", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/17/06/7a2db2d950a84e183fc457435e4be5a0bdc184965f48159d272390d88724/skylos-4.13.1.tar.gz", hash = "sha256:b7373e4bc8b1d90f3c26c8485acb1da92df012b7a1c4b77f179218e2b48d54a6", size = 957639, upload-time = "2026-05-10T06:54:20.145Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d0/8d/02cb7bd4e57ef1e2a2e33262d2f5a1de69d65c63fba999d009abda0f7a61/skylos-4.18.0.tar.gz", hash = "sha256:e96f15f171f1ec1d0686685a233bc2552bacabf1dcd55e975d7d2a7c7ec6865b", size = 1121376, upload-time = "2026-05-22T09:04:57.724Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/73/9a3f69810a8d834027aa843567ff67a96600863542302f455d2cd17db9f3/skylos-4.13.1-py3-none-any.whl", hash = "sha256:9ea8818f1ad341aa2e1eb892fe217b529e9bfebb8f31ed8a104c0b444999f215", size = 719550, upload-time = "2026-05-10T06:54:18.704Z" },
+    { url = "https://files.pythonhosted.org/packages/00/c9/8d1049539965c2da4f12cc5e8684d3e413355715a6265a48c4a459b526e7/skylos-4.18.0-py3-none-any.whl", hash = "sha256:0982fb1c416c07fc5665cad9eb53ffb31419547d9b5b8405f95b4c5935ea6057", size = 866967, upload-time = "2026-05-22T09:04:56.286Z" },
 ]
 
 [[package]]
