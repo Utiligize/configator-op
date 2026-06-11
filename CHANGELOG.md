@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-…
+- fix(ci): expand DefectDojo auth header and fail the step on upload errors ([b68152b])
 
 ### Removed
 
@@ -139,6 +139,7 @@ Initial release.
 [973cbc0]: https://github.com/Utiligize/configator-op/commit/973cbc0a9a8b055c20a48c8992f15b7c7eed0fb6
 [981fc8f]: https://github.com/Utiligize/configator-op/commit/981fc8f4087cef661888e93bf8d147a085f04dc6
 [b3def03]: https://github.com/Utiligize/configator-op/commit/b3def038d61c38f7e14cc33334da9293c64ed168
+[b68152b]: https://github.com/Utiligize/configator-op/commit/b68152b10d95bf3d7f59b2806365b0765fa659a9
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
 [d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953
