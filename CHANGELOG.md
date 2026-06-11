@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- fix(ci): expand DefectDojo auth header and fail the step on upload errors ([b68152b])
+- fix(ci): expand DefectDojo auth header and fail the step on upload errors ([18f5bb9])
 
 ### Removed
 
@@ -124,6 +124,7 @@ Initial release.
 [03c114f]: https://github.com/Utiligize/configator-op/commit/03c114f08b5d0249bf2dfa4ad068871c43e89afb
 [0ddc16a]: https://github.com/Utiligize/configator-op/commit/0ddc16ac3e8e0637137bf93146630198215d6546
 [147834f]: https://github.com/Utiligize/configator-op/commit/147834f243868ecfe27152aad4251982b4755dbd
+[18f5bb9]: https://github.com/Utiligize/configator-op/commit/18f5bb9d1741cc91ffe88a56f9c0b4ea8e212972
 [2fbb13e]: https://github.com/Utiligize/configator-op/commit/2fbb13e9ab59dd72fce7f8d70cde51398d75f814
 [4de6b3e]: https://github.com/Utiligize/configator-op/commit/4de6b3e5bcc06d921f3c263dd692c5ecdf95762c
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f
@@ -139,7 +140,6 @@ Initial release.
 [973cbc0]: https://github.com/Utiligize/configator-op/commit/973cbc0a9a8b055c20a48c8992f15b7c7eed0fb6
 [981fc8f]: https://github.com/Utiligize/configator-op/commit/981fc8f4087cef661888e93bf8d147a085f04dc6
 [b3def03]: https://github.com/Utiligize/configator-op/commit/b3def038d61c38f7e14cc33334da9293c64ed168
-[b68152b]: https://github.com/Utiligize/configator-op/commit/b68152b10d95bf3d7f59b2806365b0765fa659a9
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
 [d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953
