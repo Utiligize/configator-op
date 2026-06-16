@@ -12,6 +12,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+…
+
+### Removed
+
+…
+
+## [3000.4.1] - 2026-06-16
+
+### Changed
+
+- chore(ci): Update SonarSource/sonarqube-scan-action action to v8.2.0 ([9e302e2])
+- chore(ci): Update astral-sh/setup-uv action to v8.2.0 ([ed8b0aa])
+- chore(deps): bump actions/checkout from 6.0.2 to 6.0.3 ([2aa9d2e])
+- chore: update python dependencies ([5216dfc])
 - fix(ci): expand DefectDojo auth header and fail the step on upload errors ([18f5bb9])
 
 ### Removed
@@ -109,7 +123,8 @@ Initial release.
 
 <!-- markdownlint-disable-file MD024 -->
 
-[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.4.0...HEAD
+[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.4.1...HEAD
+[3000.4.1]: https://github.com/Utiligize/configator-op/compare/v3000.4.0...v3000.4.1
 [3000.4.0]: https://github.com/Utiligize/configator-op/compare/v3000.3.0...v3000.4.0
 [3000.3.0]: https://github.com/Utiligize/configator-op/compare/v3000.2.0...v3000.3.0
 [3000.2.0]: https://github.com/Utiligize/configator-op/compare/v3000.1.1...v3000.2.0
@@ -125,9 +140,11 @@ Initial release.
 [0ddc16a]: https://github.com/Utiligize/configator-op/commit/0ddc16ac3e8e0637137bf93146630198215d6546
 [147834f]: https://github.com/Utiligize/configator-op/commit/147834f243868ecfe27152aad4251982b4755dbd
 [18f5bb9]: https://github.com/Utiligize/configator-op/commit/18f5bb9d1741cc91ffe88a56f9c0b4ea8e212972
+[2aa9d2e]: https://github.com/Utiligize/configator-op/commit/2aa9d2e884ba7e99ecdd6cf73ef10f2721340cb9
 [2fbb13e]: https://github.com/Utiligize/configator-op/commit/2fbb13e9ab59dd72fce7f8d70cde51398d75f814
 [4de6b3e]: https://github.com/Utiligize/configator-op/commit/4de6b3e5bcc06d921f3c263dd692c5ecdf95762c
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f
+[5216dfc]: https://github.com/Utiligize/configator-op/commit/5216dfc83b3b52cea84a62e7d62cfbe9c6e1b625
 [579567d]: https://github.com/Utiligize/configator-op/commit/579567d6bd872896f25d8f0b8f9e2773407bcb59
 [5ddbe83]: https://github.com/Utiligize/configator-op/commit/5ddbe839ddbb42fe72c1d5acffa2751ced5f967c
 [6026bdf]: https://github.com/Utiligize/configator-op/commit/6026bdf39955a68efa803a9a28b8133ce458c68e
@@ -140,12 +157,14 @@ Initial release.
 [9688a7c]: https://github.com/Utiligize/configator-op/commit/9688a7c1da90d13ce2d54bd270ab6a7e3f3e5de1
 [973cbc0]: https://github.com/Utiligize/configator-op/commit/973cbc0a9a8b055c20a48c8992f15b7c7eed0fb6
 [981fc8f]: https://github.com/Utiligize/configator-op/commit/981fc8f4087cef661888e93bf8d147a085f04dc6
+[9e302e2]: https://github.com/Utiligize/configator-op/commit/9e302e207124fdabdbbf3a358dcb971d9edf7e9c
 [b3def03]: https://github.com/Utiligize/configator-op/commit/b3def038d61c38f7e14cc33334da9293c64ed168
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
 [d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953
 [e5a453a]: https://github.com/Utiligize/configator-op/commit/e5a453ac59fe11fbea083b9168289ef111424dc4
 [ed45385]: https://github.com/Utiligize/configator-op/commit/ed45385e514b42f2d0e86391cff416086e175ea4
+[ed8b0aa]: https://github.com/Utiligize/configator-op/commit/ed8b0aa0a3bbc6fc0a731efa59f2ee4091672b77
 [f18dfe9]: https://github.com/Utiligize/configator-op/commit/f18dfe9db79c03fe90cc27535b764e2b55af5942
 [f723cf2]: https://github.com/Utiligize/configator-op/commit/f723cf265a17cbbede4d65ca9eb9c408b3b66940
 [fccaa88]: https://github.com/Utiligize/configator-op/commit/fccaa88d0f869a204fcc0af0a0340b8cc1577dc7
