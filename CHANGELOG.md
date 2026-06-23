@@ -8,11 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-…
+- `PostgresConfig.dsn_redacted()` returning a log-safe DSN with the password masked
 
 ### Changed
 
-- fix(security): default Postgres `PGSSLMODE` to `require` instead of `prefer` (UT-10975)
+- fix(security): default Postgres `PGSSLMODE` to `require` instead of `prefer`
 
 ### Removed
 

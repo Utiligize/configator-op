@@ -80,11 +80,32 @@ class PostgresConfig(ConfigatorSettings):
     SCHEME: str = "postgresql"
 
     def dsn(self) -> PostgresDsn:
-        """Build the PostgreSQL DSN string."""
+        """Build the PostgreSQL DSN string.
+
+        WARNING: the returned DSN embeds the plaintext password and must never
+        be logged, included in an exception, or sent to error-reporting tools.
+        Use ``dsn_redacted()`` for any logging or diagnostic output.
+        """
         return PostgresDsn.build(
             scheme=self.SCHEME,
             username=self.PGUSER,
             password=self.PGPASSWORD.get_secret_value(),
+            host=self.PGHOST,
+            port=self.PGPORT,
+            path=f"{self.PGDATABASE}",
+            query=f"sslmode={self.PGSSLMODE}",
+        )
+
+    def dsn_redacted(self) -> PostgresDsn:
+        """Build a log-safe PostgreSQL DSN with the password masked.
+
+        Safe to log or include in diagnostics; use this instead of ``dsn()``
+        anywhere the value may be persisted or transmitted.
+        """
+        return PostgresDsn.build(
+            scheme=self.SCHEME,
+            username=self.PGUSER,
+            password=str(self.PGPASSWORD),
             host=self.PGHOST,
             port=self.PGPORT,
             path=f"{self.PGDATABASE}",

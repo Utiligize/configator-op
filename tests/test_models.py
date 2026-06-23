@@ -53,6 +53,13 @@ def test_postgres_config_dsn_without_ssl(pg_cfg_ssl_disabled):
     actual = f"{pg_cfg_ssl_disabled.dsn()}"
     assert actual == expected
 
+def test_postgres_config_dsn_redacted_masks_password(pg_cfg_ssl_required):
+    """Test that dsn_redacted() does not expose the plaintext password."""
+    redacted = f"{pg_cfg_ssl_required.dsn_redacted()}"
+    assert "hunter2" not in redacted
+    assert redacted == "postgresql://test_user:**********@localhost:5432/test_db?sslmode=require"
+
+
 def test_postgres_config_defaults():
     """Test that the default values are set correctly in PostgresConfig with no env vals set."""
     default_config = PostgresConfig()
