@@ -56,7 +56,7 @@ def test_postgres_config_dsn_without_ssl(pg_cfg_ssl_disabled):
 def test_postgres_config_defaults():
     """Test that the default values are set correctly in PostgresConfig with no env vals set."""
     default_config = PostgresConfig()
-    expected = "postgresql://postgres:hunter2@localhost:5432/postgres?sslmode=prefer"
+    expected = "postgresql://postgres:hunter2@localhost:5432/postgres?sslmode=require"
     actual = f"{default_config.dsn()}"
     assert actual == expected
 

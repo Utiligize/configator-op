@@ -76,7 +76,7 @@ class PostgresConfig(ConfigatorSettings):
     PGUSER: str = "postgres"
     PGPASSWORD: SecretStr = SecretStr("hunter2")
     PGDATABASE: str = "postgres"
-    PGSSLMODE: _PostgresSSLMode = _PostgresSSLMode("prefer")
+    PGSSLMODE: _PostgresSSLMode = _PostgresSSLMode("require")
     SCHEME: str = "postgresql"
 
     def dsn(self) -> PostgresDsn:

@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-…
+- fix(security): default Postgres `PGSSLMODE` to `require` instead of `prefer` (UT-10975)
 
 ### Removed
 
