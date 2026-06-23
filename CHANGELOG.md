@@ -46,7 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - ci: harden zizmor config, add SHA pins ([76d4594])
 - feat: allow onepassword-sdk-0.4 in dependencies ([01b9485])
 - fix: include failed secret reference URI in resolution error message ([d5b1eda])
-- fix: resolve Skylos quality and danger findings ([b3def03])
+- fix: resolve Skylos quality and danger findings ([5bd3fb9])
 - fix: update test fixture for onepassword-sdk 0.4 compatibility ([7880b48])
 
 ## [3000.3.0] - 2026-02-13
@@ -146,6 +146,7 @@ Initial release.
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f
 [5216dfc]: https://github.com/Utiligize/configator-op/commit/5216dfc83b3b52cea84a62e7d62cfbe9c6e1b625
 [579567d]: https://github.com/Utiligize/configator-op/commit/579567d6bd872896f25d8f0b8f9e2773407bcb59
+[5bd3fb9]: https://github.com/Utiligize/configator-op/commit/5bd3fb9456d2bb37fc494cc6acb8d28349754709
 [5ddbe83]: https://github.com/Utiligize/configator-op/commit/5ddbe839ddbb42fe72c1d5acffa2751ced5f967c
 [6026bdf]: https://github.com/Utiligize/configator-op/commit/6026bdf39955a68efa803a9a28b8133ce458c68e
 [6269c0b]: https://github.com/Utiligize/configator-op/commit/6269c0bbedd9819b672c0df25698e1544b23196e
@@ -158,7 +159,6 @@ Initial release.
 [973cbc0]: https://github.com/Utiligize/configator-op/commit/973cbc0a9a8b055c20a48c8992f15b7c7eed0fb6
 [981fc8f]: https://github.com/Utiligize/configator-op/commit/981fc8f4087cef661888e93bf8d147a085f04dc6
 [9e302e2]: https://github.com/Utiligize/configator-op/commit/9e302e207124fdabdbbf3a358dcb971d9edf7e9c
-[b3def03]: https://github.com/Utiligize/configator-op/commit/b3def038d61c38f7e14cc33334da9293c64ed168
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
 [d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953
