@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `PostgresConfig.dsn_redacted()` returning a log-safe DSN with the password masked
+- `PostgresConfig.dsn_redacted()` returning a log-safe DSN string with the password masked
 
 ### Changed
 

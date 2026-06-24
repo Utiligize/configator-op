@@ -96,20 +96,23 @@ class PostgresConfig(ConfigatorSettings):
             query=f"sslmode={self.PGSSLMODE}",
         )
 
-    def dsn_redacted(self) -> PostgresDsn:
-        """Build a log-safe PostgreSQL DSN with the password masked.
+    def dsn_redacted(self) -> str:
+        """Build a log-safe PostgreSQL DSN string with the password masked.
 
         Safe to log or include in diagnostics; use this instead of ``dsn()``
-        anywhere the value may be persisted or transmitted.
+        anywhere the value may be persisted or transmitted. Returns a plain
+        ``str`` because the masked password makes it unusable as a real DSN.
         """
-        return PostgresDsn.build(
-            scheme=self.SCHEME,
-            username=self.PGUSER,
-            password=str(self.PGPASSWORD),
-            host=self.PGHOST,
-            port=self.PGPORT,
-            path=f"{self.PGDATABASE}",
-            query=f"sslmode={self.PGSSLMODE}",
+        return str(
+            PostgresDsn.build(
+                scheme=self.SCHEME,
+                username=self.PGUSER,
+                password=str(self.PGPASSWORD),
+                host=self.PGHOST,
+                port=self.PGPORT,
+                path=f"{self.PGDATABASE}",
+                query=f"sslmode={self.PGSSLMODE}",
+            )
         )
 
 
