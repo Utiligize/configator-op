@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - fix(security): default Postgres `PGSSLMODE` to `require` instead of `prefer`
 
+### Fixed
+
+- Hydrating a schema field annotated with a parameterized generic (e.g. `list[str]`) no longer crashes with `TypeError: issubclass() arg 1 must be a class`; the annotation is now resolved to its origin before any `issubclass()` check
+
 ### Removed
 
 …
