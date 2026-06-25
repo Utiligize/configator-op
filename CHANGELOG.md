@@ -6,21 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3000.5.0] - 2026-06-25
+
 ### Added
 
-- `PostgresConfig.dsn_redacted()` returning a log-safe DSN string with the password masked
+- `PostgresConfig.dsn_redacted()` returning a log-safe DSN string with the password masked ([85f0dca])
 
 ### Changed
 
-- fix(security): default Postgres `PGSSLMODE` to `require` instead of `prefer`
+- chore(ci): Update actions/checkout action to v7 ([d7ae1b7])
+- chore: update python dependencies ([e9c5bfb])
+- fix(security): default Postgres `PGSSLMODE` to `require` instead of `prefer` ([91d626f])
 
 ### Fixed
 
-- Hydrating a schema field annotated with a parameterized generic (e.g. `list[str]`) no longer crashes with `TypeError: issubclass() arg 1 must be a class`; the annotation is now resolved to its origin before any `issubclass()` check
-
-### Removed
-
-…
+- Hydrating a schema field annotated with a parameterized generic (e.g. `list[str]`) no longer crashes with `TypeError: issubclass() arg 1 must be a class`; the annotation is now resolved to its origin before any `issubclass()` check ([ed2cc18])
 
 ## [3000.4.1] - 2026-06-16
 
@@ -127,7 +127,8 @@ Initial release.
 
 <!-- markdownlint-disable-file MD024 -->
 
-[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.4.1...HEAD
+[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.5.0...HEAD
+[3000.5.0]: https://github.com/Utiligize/configator-op/compare/v3000.4.1...v3000.5.0
 [3000.4.1]: https://github.com/Utiligize/configator-op/compare/v3000.4.0...v3000.4.1
 [3000.4.0]: https://github.com/Utiligize/configator-op/compare/v3000.3.0...v3000.4.0
 [3000.3.0]: https://github.com/Utiligize/configator-op/compare/v3000.2.0...v3000.3.0
@@ -158,6 +159,8 @@ Initial release.
 [7569cb8]: https://github.com/Utiligize/configator-op/commit/7569cb8540028800570513411a5ab5291ab45cc6
 [76d4594]: https://github.com/Utiligize/configator-op/commit/76d459490bc57f3261ca5561b60dfb8768eb3c7c
 [7880b48]: https://github.com/Utiligize/configator-op/commit/7880b4823ff164718a2bc86627af810ac00daf82
+[85f0dca]: https://github.com/Utiligize/configator-op/commit/85f0dca1f85a306ca792544483aeddccdc7cad61
+[91d626f]: https://github.com/Utiligize/configator-op/commit/91d626fb2d31c6d01df2a31af02c4d43972e10c2
 [94d14ec]: https://github.com/Utiligize/configator-op/commit/94d14eccdec1257c717d4becae2b8e7f39a4add2
 [9688a7c]: https://github.com/Utiligize/configator-op/commit/9688a7c1da90d13ce2d54bd270ab6a7e3f3e5de1
 [973cbc0]: https://github.com/Utiligize/configator-op/commit/973cbc0a9a8b055c20a48c8992f15b7c7eed0fb6
@@ -165,8 +168,11 @@ Initial release.
 [9e302e2]: https://github.com/Utiligize/configator-op/commit/9e302e207124fdabdbbf3a358dcb971d9edf7e9c
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
+[d7ae1b7]: https://github.com/Utiligize/configator-op/commit/d7ae1b778b7798f0cca0fa4aa3611008aaef6b29
 [d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953
 [e5a453a]: https://github.com/Utiligize/configator-op/commit/e5a453ac59fe11fbea083b9168289ef111424dc4
+[e9c5bfb]: https://github.com/Utiligize/configator-op/commit/e9c5bfb1d5182876354dd3974c97fd2e2bd10c3f
+[ed2cc18]: https://github.com/Utiligize/configator-op/commit/ed2cc18f8e318db3e4bcd732d15141724ba9a5b3
 [ed45385]: https://github.com/Utiligize/configator-op/commit/ed45385e514b42f2d0e86391cff416086e175ea4
 [ed8b0aa]: https://github.com/Utiligize/configator-op/commit/ed8b0aa0a3bbc6fc0a731efa59f2ee4091672b77
 [f18dfe9]: https://github.com/Utiligize/configator-op/commit/f18dfe9db79c03fe90cc27535b764e2b55af5942
