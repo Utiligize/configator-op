@@ -10,7 +10,7 @@
 from functools import partial
 from importlib.metadata import version
 from json import JSONDecodeError, loads
-from typing import Any
+from typing import Any, get_origin
 
 from onepassword.client import Client as OnePasswordClient
 from onepassword.types import Item, ItemField, ItemOverview, VaultOverview
@@ -103,7 +103,10 @@ async def _hydrate_field(
 ) -> Any:
     """Hydrate single field from 1Password item."""
     wet_fields = item.fields
-    if issubclass(cls, BaseModel):
+    # Parameterized generics (e.g. list[str]) are not classes, so resolve them to their
+    # origin before any issubclass() check; non-generic annotations are their own origin.
+    origin = get_origin(cls) or cls
+    if issubclass(origin, BaseModel):
         sections = _get_sections(item)
         return await _hydrate_model(
             op_client=op_client, schema=cls, item=item, section_id=sections[key.lower()]
@@ -113,9 +116,9 @@ async def _hydrate_field(
         ret_val = default
         try:
             str_val = await _resolve_op_link(op_client, next(filter(matcher, wet_fields)).value)
-            if issubclass(cls, (dict, list, set, tuple)):
+            if issubclass(origin, (dict, list, set, tuple)):
                 ret_val = cls(loads(str_val))
-            elif issubclass(cls, bool):
+            elif issubclass(origin, bool):
                 ret_val = _parse_bool(str_val)
             else:
                 ret_val = cls(str_val)  # type: ignore[call-arg]

@@ -41,6 +41,12 @@ class SectionConfig(BaseModel):
     timeout: int
 
 
+class GenericConfig(BaseModel):
+    """Schema with a parameterized generic field."""
+
+    price_areas: list[str]
+
+
 class ComplexConfig(BaseModel):
     """Complex configuration schema with nested sections."""
 
@@ -394,6 +400,37 @@ async def test_resolve_op_link_too_deep(mock_op_client):
 
 
 # Tests for _hydrate_model
+@mark.asyncio
+async def test_hydrate_model_parameterized_generic(mock_op_client):
+    """Test hydrating model with a parameterized generic field (e.g. list[str])."""
+    item = Item(
+        id="item1",
+        title="Test",
+        vaultId="vault1",
+        category="Login",
+        fields=[
+            ItemField(
+                id="f1",
+                title="price-areas",
+                fieldType="Text",
+                value='["DK1", "DK2"]',
+                sectionId=None,
+            ),
+        ],
+        sections=[],
+        notes="",
+        tags=[],
+        websites=[],
+        version=1,
+        files=[],
+        createdAt="2024-01-01T00:00:00Z",
+        updatedAt="2024-01-01T00:00:00Z",
+    )
+    mock_op_client.secrets.resolve.side_effect = lambda x: x
+    result = await _hydrate_model(op_client=mock_op_client, schema=GenericConfig, item=item)
+    assert result.price_areas == ["DK1", "DK2"]
+
+
 @mark.asyncio
 async def test_hydrate_model_simple(mock_op_client):
     """Test hydrating simple model."""
