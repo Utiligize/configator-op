@@ -1,7 +1,7 @@
 from os import getenv
 
 from pydantic import SecretStr, ValidationError
-from pytest import fixture, raises
+from pytest import fixture, mark, raises
 
 from configator.models import PostgresConfig, SentryConfig
 
@@ -113,3 +113,29 @@ def test_sentry_env_prefix(monkeypatch):
         monkeypatch.setenv("SENTRY_DSN", expected_dsn)
         actual_dsn = SentryConfig(dsn="foo").dsn
         assert f"{actual_dsn}" == expected_dsn
+
+
+@mark.parametrize("env_var", ["ENVIRONMENT", "APP_ENV"])
+@mark.parametrize("env_value", ["product", "production", "PRODUCTION", "Production"])
+def test_dev_mode_refused_in_production(monkeypatch, env_var, env_value):
+    """Dev mode must refuse to activate when the environment resolves to production."""
+    with monkeypatch.context():
+        monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+        monkeypatch.setenv(env_var, env_value)
+        with raises(RuntimeError, match="CONFIGATOR_DEV_MODE"):
+            _ = PostgresConfig()
+
+def test_environment_prefers_environment_over_app_env(monkeypatch):
+    """ENVIRONMENT takes precedence over APP_ENV when resolving the environment."""
+    with monkeypatch.context():
+        monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+        monkeypatch.setenv("ENVIRONMENT", "develop")
+        monkeypatch.setenv("APP_ENV", "product")
+        _ = PostgresConfig()
+
+def test_dev_mode_allowed_outside_production(monkeypatch):
+    """Dev mode activates normally in non-production environments."""
+    with monkeypatch.context():
+        monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+        monkeypatch.setenv("ENVIRONMENT", "staging")
+        _ = PostgresConfig()
