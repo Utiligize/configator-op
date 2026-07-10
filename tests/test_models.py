@@ -121,6 +121,8 @@ def test_dev_mode_refused_in_production(monkeypatch, env_var, env_value):
     """Dev mode must refuse to activate when the environment resolves to production."""
     with monkeypatch.context():
         monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+        monkeypatch.delenv("ENVIRONMENT", raising=False)
+        monkeypatch.delenv("APP_ENV", raising=False)
         monkeypatch.setenv(env_var, env_value)
         with raises(RuntimeError, match="CONFIGATOR_DEV_MODE"):
             _ = PostgresConfig()
