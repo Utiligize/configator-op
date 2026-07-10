@@ -44,6 +44,12 @@ class ConfigatorSettings(BaseSettings):
         dev_mode = getenv("CONFIGATOR_DEV_MODE", None)
         log_msg = "configator developer mode is %s"
         if dev_mode:
+            if _is_production():
+                raise RuntimeError(
+                    "CONFIGATOR_DEV_MODE is set in a production environment; refusing to let "
+                    "a .env file override vetted secrets. Unset CONFIGATOR_DEV_MODE (and ensure "
+                    "no .env ships in production images)."
+                )
             log.warning(log_msg, "ENABLED")
             return dotenv_settings, env_settings, init_settings, file_secret_settings
         else:
@@ -56,6 +62,17 @@ class Environment(StrEnum):
     DEVELOPMENT = "develop"
     STAGING = "staging"
     PRODUCTION = "product"
+
+
+def _is_production() -> bool:
+    """Return True when the deployment environment resolves to production.
+
+    Reads ``ENVIRONMENT`` first, falling back to ``APP_ENV``, and matches the
+    value case-insensitively against the ``Environment.PRODUCTION`` prefix so
+    both ``product`` and ``production`` are recognised.
+    """
+    env = getenv("ENVIRONMENT") or getenv("APP_ENV") or ""
+    return env.lower().startswith(Environment.PRODUCTION)
 
 
 @unique

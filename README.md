@@ -65,6 +65,14 @@ When developer mode is enabled, values are loaded with the following priority (h
 
 Without developer mode, the standard priority applies (1Password values take precedence over environment variables and .env files).
 
+> **⚠️ Never enable developer mode in production.** A stray `.env` file would
+> silently override vetted secrets. Configator guards against this: if
+> `CONFIGATOR_DEV_MODE` is set while `ENVIRONMENT` (or, as a fallback, `APP_ENV`)
+> resolves to production — any value case-insensitively starting with `product`,
+> e.g. `product` or `production` — instantiating a config model raises a
+> `RuntimeError`. Production deployments must ensure `CONFIGATOR_DEV_MODE` is
+> unset and that no `.env` file ships in production images.
+
 This feature works with the provided common configuration models (`PostgresConfig`, `SentryConfig`). For your own config schemas, you can simply extend `ConfigatorSettings` to get this behavior.
 
 ## Installation
