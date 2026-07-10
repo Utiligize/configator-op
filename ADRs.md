@@ -437,7 +437,7 @@ All common configuration models (`PostgresConfig`, `SentryConfig`) extend `Confi
 
 - Operational considerations
   - .env files should never be committed to version control (add to .gitignore).
-  - Developer mode should never be enabled in production environments.
+  - Developer mode should never be enabled in production environments. This is enforced: when `CONFIGATOR_DEV_MODE` is set while `ENVIRONMENT` (fallback `APP_ENV`) resolves to production — matched case-insensitively against the `Environment.PRODUCTION` prefix (`product`) — instantiating a config model raises a `RuntimeError` instead of silently letting a `.env` file override vetted secrets.
   - Teams should document when and how to use developer mode in development guides.
   - .env file format must match pydantic-settings expectations (KEY=value).
 
