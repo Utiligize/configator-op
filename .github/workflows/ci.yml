@@ -103,7 +103,6 @@ jobs:
     - name: Test
       run: just test
       env:
-        COVERAGE_CORE: sysmon  # sys.monitoring coverage backend cuts branch-coverage overhead
         OP_TOKEN: ${{ secrets.OP_TOKEN }}  # zizmor: ignore[secrets-outside-env]
 
     - name: Upload coverage report
