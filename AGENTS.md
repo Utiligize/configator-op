@@ -26,7 +26,7 @@ The module is built around the 1Password SDK which has docs at <https://develope
 - Line length: 99 characters
 - Indentation: 4 spaces for Python files
 - Imports: Grouped by stdlib, third-party, local with alphabetical ordering
-- Type hints: Required for all functions (`disallow_untyped_defs = true`)
+- Type hints: Required for all functions in `src/` (enforced by Ruff's `ANN` rules); type checking via Pyrefly
 - Naming: Follow Python conventions (snake_case for functions/variables, CamelCase for classes)
 - Docstrings: Follow PEP 257 for concise, single-line docstrings for simple functions, more detailed for complex functionality
 - Testing: Use pytest fixtures and appropriate mocking

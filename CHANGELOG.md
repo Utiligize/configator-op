@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Guard against enabling developer mode in production: when `CONFIGATOR_DEV_MODE` is set while `ENVIRONMENT` (fallback `APP_ENV`) resolves to production, instantiating a config model now raises a `RuntimeError` instead of letting a `.env` file override vetted secrets
 - `SECURITY.md` documenting the private vulnerability disclosure channel and supported-versions policy
 
+### Changed
+
+- Static type checking is now done with [Pyrefly](https://pyrefly.org/) instead of mypy, and covers `tests/` in addition to `src/`
+
 ## [3000.5.0] - 2026-06-25
 
 ### Added

@@ -1,5 +1,6 @@
 """Unit tests for Configator core functionality."""
 
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 from onepassword.types import Item, ItemField, ItemOverview, ItemSection, VaultOverview
@@ -59,7 +60,7 @@ class ComplexConfig(BaseModel):
 @fixture
 def mock_vault():
     """Mock VaultOverview."""
-    kwargs = {"id": "vault123", "title": "TestVault"}
+    kwargs: dict[str, Any] = {"id": "vault123", "title": "TestVault"}
     if VaultType is not None:
         kwargs.update(
             description="",
@@ -70,6 +71,7 @@ def mock_vault():
             createdAt="2024-01-01T00:00:00Z",
             updatedAt="2024-01-01T00:00:00Z",
         )
+    # pyrefly: ignore[missing-argument]  # extra fields only exist on onepassword-sdk>=0.4
     return VaultOverview(**kwargs)
 
 
