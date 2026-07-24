@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - Static type checking is now done with [Pyrefly](https://pyrefly.org/) instead of mypy, and covers `tests/` in addition to `src/`
+- CI runs as three jobs — lint, test (Python 3.12/3.13/3.14) and scan — so linting fails fast instead of waiting behind the test matrix; the Sonar scan consumes the coverage report uploaded by the 3.12 test job and is skipped on draft pull requests
 
 ## [3000.5.0] - 2026-06-25
 
