@@ -20,7 +20,7 @@ is-clean:
 lint:
   uv run python -m ruff format {{justfile_directory()}}/src
   uv run python -m ruff check {{justfile_directory()}}/src
-  cd {{justfile_directory()}}/src && uv run python -m mypy -p configator --config-file {{justfile_directory()}}/pyproject.toml
+  cd {{justfile_directory()}} && uv run pyrefly check --min-severity warn
 
 # Lint the project for the CI pipeline
 lint-ci:
@@ -28,7 +28,7 @@ lint-ci:
   EXIT_STATUS=0
   uv run python -m ruff format --check {{justfile_directory()}}/src || EXIT_STATUS=$?
   uv run python -m ruff check {{justfile_directory()}}/src || EXIT_STATUS=$?
-  cd {{justfile_directory()}}/src && uv run python -m mypy -p configator --config-file {{justfile_directory()}}/pyproject.toml || EXIT_STATUS=$?
+  cd {{justfile_directory()}} && uv run pyrefly check --min-severity warn || EXIT_STATUS=$?
   exit $EXIT_STATUS
 
 # Let Ruff auto-fix what it can

@@ -12,7 +12,7 @@ from pytest import approx, mark
 from configator.core import load_config
 from configator.models import SentryConfig
 
-OP_TOKEN = getenv("OP_TOKEN")
+OP_TOKEN = getenv("OP_TOKEN", "")
 
 
 class ValuesConfig(BaseModel):
@@ -39,7 +39,7 @@ class E2ETestConfig(BaseModel):
     not_set: str = "default_value"
 
 
-@mark.skipif(OP_TOKEN is None, reason="no 1Password token provided")
+@mark.skipif(not OP_TOKEN, reason="no 1Password token provided")
 @mark.asyncio
 async def test_load_config():
     expected_config = E2ETestConfig(
