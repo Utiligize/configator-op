@@ -1,14 +1,15 @@
 from os import getenv
 
+import pytest
 from pydantic import SecretStr, ValidationError
-from pytest import fixture, mark, raises
 
 from configator.models import PostgresConfig, SentryConfig
 
 
-@fixture
+@pytest.fixture
 def enable_dev_mode(monkeypatch):
     monkeypatch.setenv("CONFIGATOR_DEV_MODE", "SUDO MAKE ME A SANDWICH")
+
 
 def _pg_cfg(sslmode: str):
     return PostgresConfig(
@@ -20,15 +21,18 @@ def _pg_cfg(sslmode: str):
         PGSSLMODE=sslmode,
     )
 
-@fixture
+
+@pytest.fixture
 def pg_cfg_ssl_disabled():
     return _pg_cfg(sslmode="disable")
 
-@fixture
+
+@pytest.fixture
 def pg_cfg_ssl_required():
     return _pg_cfg(sslmode="require")
 
-@fixture
+
+@pytest.fixture
 def pg_env_cfg(monkeypatch):
     env_vars = {
         "PGHOST": "db.example.com",
@@ -41,17 +45,20 @@ def pg_env_cfg(monkeypatch):
     for key, value in env_vars.items():
         monkeypatch.setenv(key, value)
 
+
 def test_postgres_config_dsn_with_ssl(pg_cfg_ssl_required):
     """Test the DSN generation of PostgresConfig with forced SSL."""
     expected = "postgresql://test_user:hunter2@localhost:5432/test_db?sslmode=require"
     actual = f"{pg_cfg_ssl_required.dsn()}"
     assert actual == expected
 
+
 def test_postgres_config_dsn_without_ssl(pg_cfg_ssl_disabled):
     """Test the DSN generation of PostgresConfig without SSL."""
     expected = "postgresql://test_user:hunter2@localhost:5432/test_db?sslmode=disable"
     actual = f"{pg_cfg_ssl_disabled.dsn()}"
     assert actual == expected
+
 
 def test_postgres_config_dsn_redacted_masks_password(pg_cfg_ssl_required):
     """Test that dsn_redacted() does not expose the plaintext password."""
@@ -66,6 +73,7 @@ def test_postgres_config_defaults():
     expected = "postgresql://postgres:hunter2@localhost:5432/postgres?sslmode=require"
     actual = f"{default_config.dsn()}"
     assert actual == expected
+
 
 def test_postgres_config_from_env(enable_dev_mode, pg_env_cfg):
     """Test that the values are set correctly in PostgresConfig with env vals set."""
@@ -82,6 +90,7 @@ def test_postgres_config_from_env(enable_dev_mode, pg_env_cfg):
     actual = f"{config.dsn()}"
     assert actual == expected
 
+
 def test_postgres_config_from_env_only_when_dev_mode_enabled(pg_env_cfg):
     """Test that the values are *not* set from env when dev mode is not enabled."""
     assert getenv("CONFIGATOR_DEV_MODE", None) is None
@@ -97,13 +106,15 @@ def test_postgres_config_from_env_only_when_dev_mode_enabled(pg_env_cfg):
     actual = f"{config.dsn()}"
     assert actual == expected
 
+
 def test_postgres_config_sslmode_failed(monkeypatch):
     """Test that the sslmode is validated against the enum of allowed values."""
     with monkeypatch.context():
         monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
         monkeypatch.setenv("PGSSLMODE", "cheese")
-        with raises(ValidationError):
+        with pytest.raises(ValidationError):
             _ = PostgresConfig()
+
 
 def test_sentry_env_prefix(monkeypatch):
     """Test that SentryConfig correctly uses the SENTRY_ env var prefix."""
@@ -115,8 +126,8 @@ def test_sentry_env_prefix(monkeypatch):
         assert f"{actual_dsn}" == expected_dsn
 
 
-@mark.parametrize("env_var", ["ENVIRONMENT", "APP_ENV"])
-@mark.parametrize("env_value", ["product", "production", "PRODUCTION", "Production"])
+@pytest.mark.parametrize("env_var", ["ENVIRONMENT", "APP_ENV"])
+@pytest.mark.parametrize("env_value", ["product", "production", "PRODUCTION", "Production"])
 def test_dev_mode_refused_in_production(monkeypatch, env_var, env_value):
     """Dev mode must refuse to activate when the environment resolves to production."""
     with monkeypatch.context():
@@ -124,8 +135,9 @@ def test_dev_mode_refused_in_production(monkeypatch, env_var, env_value):
         monkeypatch.delenv("ENVIRONMENT", raising=False)
         monkeypatch.delenv("APP_ENV", raising=False)
         monkeypatch.setenv(env_var, env_value)
-        with raises(RuntimeError, match="CONFIGATOR_DEV_MODE"):
+        with pytest.raises(RuntimeError, match="CONFIGATOR_DEV_MODE"):
             _ = PostgresConfig()
+
 
 def test_environment_prefers_environment_over_app_env(monkeypatch):
     """ENVIRONMENT takes precedence over APP_ENV when resolving the environment."""
@@ -134,6 +146,7 @@ def test_environment_prefers_environment_over_app_env(monkeypatch):
         monkeypatch.setenv("ENVIRONMENT", "develop")
         monkeypatch.setenv("APP_ENV", "product")
         _ = PostgresConfig()
+
 
 def test_dev_mode_allowed_outside_production(monkeypatch):
     """Dev mode activates normally in non-production environments."""

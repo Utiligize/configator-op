@@ -6,8 +6,8 @@ Relies on a real token and a properly set up 1Password item.
 from decimal import Decimal
 from os import getenv
 
+import pytest
 from pydantic import BaseModel
-from pytest import approx, mark
 
 from configator.core import load_config
 from configator.models import SentryConfig
@@ -39,8 +39,8 @@ class E2ETestConfig(BaseModel):
     not_set: str = "default_value"
 
 
-@mark.skipif(not OP_TOKEN, reason="no 1Password token provided")
-@mark.asyncio
+@pytest.mark.skipif(not OP_TOKEN, reason="no 1Password token provided")
+@pytest.mark.asyncio
 async def test_load_config():
     expected_config = E2ETestConfig(
         VALUES=ValuesConfig(
@@ -73,5 +73,5 @@ async def test_load_config():
     )
 
     assert actual_config == expected_config
-    assert actual_config.MIXIN.traces_sample_rate == approx(0.0)
+    assert actual_config.MIXIN.traces_sample_rate == pytest.approx(0.0)
     assert isinstance(actual_config.VALUES.a_decimal, Decimal)

@@ -33,6 +33,8 @@ The module is built around the 1Password SDK which has docs at <https://develope
 - Formatting: Enforced by Ruff with rules listed in `pyproject.toml`
 - Git commit messages: Use the Conventional Commits style
 - When importing Python packages, use the explicit style `from <package> import <method>`
+  - Exception: `pytest` is always imported as `import pytest` and used via its namespace
+    (`pytest.fixture`, `pytest.mark`, `pytest.raises`, …), as required by Ruff's `PT013`
 
 ## MCP Tools & Configuration
 

@@ -20,21 +20,25 @@ import os
 from configator import load_config
 from pydantic import BaseModel
 
+
 class DatabaseConfig(BaseModel):
     host: str
     port: int
     username: str
     password: str
 
+
 class AppConfig(BaseModel):
     api_key: str
     debug: bool
     timeout: int
 
+
 class Config(BaseModel):
     db: DatabaseConfig
     app: AppConfig
     debug: bool = False
+
 
 async def main():
     token = os.getenv("OP_SERVICE_ACCOUNT_TOKEN")
@@ -45,6 +49,7 @@ async def main():
         item="whatever-develop",
     )
     assert cfg.db.port == 5432
+
 
 asyncio.run(main())
 ```
