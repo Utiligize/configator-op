@@ -1,5 +1,6 @@
 """Test canary."""
 
+
 def test_tautology():
     """This test always passes."""
     expected = 4

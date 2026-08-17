@@ -10,8 +10,8 @@ try:
 except ImportError:
     # onepassword-sdk<0.4
     VaultType = None
+import pytest
 from pydantic import BaseModel
-from pytest import fixture, mark, raises
 
 from configator.core import (
     _field_matcher,
@@ -57,7 +57,7 @@ class ComplexConfig(BaseModel):
 
 
 # Fixtures
-@fixture
+@pytest.fixture
 def mock_vault():
     """Mock VaultOverview."""
     kwargs: dict[str, Any] = {"id": "vault123", "title": "TestVault"}
@@ -75,7 +75,7 @@ def mock_vault():
     return VaultOverview(**kwargs)
 
 
-@fixture
+@pytest.fixture
 def mock_item_overview():
     """Mock ItemOverview."""
     return ItemOverview(
@@ -91,7 +91,7 @@ def mock_item_overview():
     )
 
 
-@fixture
+@pytest.fixture
 def mock_item_field():
     """Mock ItemField."""
     return ItemField(
@@ -103,13 +103,13 @@ def mock_item_field():
     )
 
 
-@fixture
+@pytest.fixture
 def mock_item_section():
     """Mock ItemSection."""
     return ItemSection(id="section1", title="Section")
 
 
-@fixture
+@pytest.fixture
 def mock_item():
     """Mock Item with fields and sections."""
     return Item(
@@ -143,7 +143,7 @@ def mock_item():
     )
 
 
-@fixture
+@pytest.fixture
 def mock_op_client():
     """Mock 1Password client."""
     client = AsyncMock()
@@ -178,7 +178,7 @@ def test_field_matcher_normalizes_field_name():
 
 
 # Tests for _get_client
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_get_client():
     """Test client initialization."""
     with patch("configator.core.OnePasswordClient.authenticate") as mock_auth:
@@ -193,7 +193,7 @@ async def test_get_client():
 
 
 # Tests for _get_vault_overview
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_get_vault_overview_found(mock_op_client, mock_vault):
     """Test retrieving existing vault."""
     mock_op_client.vaults.list.return_value = [mock_vault]
@@ -201,7 +201,7 @@ async def test_get_vault_overview_found(mock_op_client, mock_vault):
     assert result == mock_vault
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_get_vault_overview_not_found(mock_op_client, mock_vault):
     """Test retrieving non-existing vault."""
     mock_op_client.vaults.list.return_value = [mock_vault]
@@ -209,7 +209,7 @@ async def test_get_vault_overview_not_found(mock_op_client, mock_vault):
     assert result is None
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_get_vault_overview_empty_list(mock_op_client):
     """Test retrieving vault from empty vault list."""
     mock_op_client.vaults.list.return_value = []
@@ -218,7 +218,7 @@ async def test_get_vault_overview_empty_list(mock_op_client):
 
 
 # Tests for _get_item_overview
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_get_item_overview_found(mock_op_client, mock_item_overview):
     """Test retrieving existing item."""
     mock_op_client.items.list.return_value = [mock_item_overview]
@@ -226,7 +226,7 @@ async def test_get_item_overview_found(mock_op_client, mock_item_overview):
     assert result == mock_item_overview
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_get_item_overview_not_found(mock_op_client, mock_item_overview):
     """Test retrieving non-existing item."""
     mock_op_client.items.list.return_value = [mock_item_overview]
@@ -234,7 +234,7 @@ async def test_get_item_overview_not_found(mock_op_client, mock_item_overview):
     assert result is None
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_get_item_overview_empty_list(mock_op_client):
     """Test retrieving item from empty item list."""
     mock_op_client.items.list.return_value = []
@@ -351,12 +351,12 @@ def test_parse_bool_falsy_values():
 
 def test_parse_bool_invalid_value():
     """Test parsing invalid boolean value raises ValueError."""
-    with raises(ValueError, match="cannot parse 'invalid' as boolean"):
+    with pytest.raises(ValueError, match="cannot parse 'invalid' as boolean"):
         _parse_bool("invalid")
 
 
 # Tests for _resolve_op_link
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_resolve_op_link_no_link(mock_op_client):
     """Test resolving non-op:// link."""
     result = await _resolve_op_link(mock_op_client, "plain_value")
@@ -364,7 +364,7 @@ async def test_resolve_op_link_no_link(mock_op_client):
     mock_op_client.secrets.resolve.assert_not_called()
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_resolve_op_link_single_link(mock_op_client):
     """Test resolving single op:// link."""
     mock_op_client.secrets.resolve.return_value = "resolved_value"
@@ -373,7 +373,7 @@ async def test_resolve_op_link_single_link(mock_op_client):
     mock_op_client.secrets.resolve.assert_called_once_with("op://vault/item/field")
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_resolve_op_link_nested_links(mock_op_client):
     """Test resolving nested op:// links."""
     mock_op_client.secrets.resolve.side_effect = [
@@ -385,24 +385,28 @@ async def test_resolve_op_link_nested_links(mock_op_client):
     assert mock_op_client.secrets.resolve.call_count == 2
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_resolve_op_link_resolution_error(mock_op_client):
     """Test resolving op:// link includes the reference in the error message."""
-    mock_op_client.secrets.resolve.side_effect = Exception("no vault matched the secret reference query")
-    with raises(RuntimeError, match="failed to resolve secret reference 'op://vault/item/field'"):
+    mock_op_client.secrets.resolve.side_effect = Exception(
+        "no vault matched the secret reference query"
+    )
+    with pytest.raises(
+        RuntimeError, match="failed to resolve secret reference 'op://vault/item/field'"
+    ):
         await _resolve_op_link(mock_op_client, "op://vault/item/field")
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_resolve_op_link_too_deep(mock_op_client):
     """Test resolving op:// link with too many levels raises RuntimeError."""
     mock_op_client.secrets.resolve.return_value = "op://vault/item/field"
-    with raises(RuntimeError, match="the dwarves delved too greedily and too deep"):
+    with pytest.raises(RuntimeError, match="the dwarves delved too greedily and too deep"):
         await _resolve_op_link(mock_op_client, "op://vault/item/field")
 
 
 # Tests for _hydrate_model
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_hydrate_model_parameterized_generic(mock_op_client):
     """Test hydrating model with a parameterized generic field (e.g. list[str])."""
     item = Item(
@@ -433,7 +437,7 @@ async def test_hydrate_model_parameterized_generic(mock_op_client):
     assert result.price_areas == ["DK1", "DK2"]
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_hydrate_model_simple(mock_op_client):
     """Test hydrating simple model."""
     item = Item(
@@ -466,7 +470,7 @@ async def test_hydrate_model_simple(mock_op_client):
     assert result.field_two == 42
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_hydrate_model_with_bool(mock_op_client):
     """Test hydrating model with boolean field."""
     item = Item(
@@ -495,7 +499,7 @@ async def test_hydrate_model_with_bool(mock_op_client):
     assert result.timeout == 30
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_hydrate_model_with_default_value(mock_op_client):
     """Test hydrating model with default value when field missing."""
     item = Item(
@@ -531,7 +535,7 @@ async def test_hydrate_model_with_default_value(mock_op_client):
     assert result.optional_field == "default_value"
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_hydrate_model_missing_required_field(mock_op_client):
     """Test hydrating model with missing required field raises RuntimeError."""
     item = Item(
@@ -559,11 +563,11 @@ async def test_hydrate_model_missing_required_field(mock_op_client):
     )
     mock_op_client.secrets.resolve.side_effect = lambda x: x
     # StopIteration in async context is wrapped in RuntimeError (PEP 479)
-    with raises(RuntimeError, match="coroutine raised StopIteration"):
+    with pytest.raises(RuntimeError, match="coroutine raised StopIteration"):
         await _hydrate_model(op_client=mock_op_client, schema=SimpleConfig, item=item)
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_hydrate_model_with_op_link(mock_op_client):
     """Test hydrating model with op:// reference."""
     item = Item(
@@ -596,7 +600,7 @@ async def test_hydrate_model_with_op_link(mock_op_client):
     assert result.field_two == 42
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_hydrate_model_nested_sections(mock_op_client):
     """Test hydrating model with nested sections."""
     item = Item(
@@ -629,7 +633,7 @@ async def test_hydrate_model_nested_sections(mock_op_client):
 
 
 # Tests for load_config
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_load_config_success(mock_op_client, mock_vault, mock_item_overview):
     """Test successful config loading."""
     item = Item(
@@ -672,13 +676,13 @@ async def test_load_config_success(mock_op_client, mock_vault, mock_item_overvie
         assert result.field_two == 123
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_load_config_vault_not_found(mock_op_client):
     """Test config loading with non-existent vault."""
     with patch("configator.core._get_client", return_value=mock_op_client):
         mock_op_client.vaults.list.return_value = []
 
-        with raises(RuntimeError, match="vault 'NonExistentVault' not found"):
+        with pytest.raises(RuntimeError, match="vault 'NonExistentVault' not found"):
             await load_config(
                 token="test_token",
                 vault="NonExistentVault",
@@ -687,14 +691,15 @@ async def test_load_config_vault_not_found(mock_op_client):
             )
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_load_config_item_not_found(mock_op_client, mock_vault):
     """Test config loading with non-existent item."""
     with patch("configator.core._get_client", return_value=mock_op_client):
         mock_op_client.vaults.list.return_value = [mock_vault]
         mock_op_client.items.list.return_value = []
 
-        with raises(RuntimeError, match="item 'NonExistentItem' not found in vault TestVault"):
+        match = "item 'NonExistentItem' not found in vault TestVault"
+        with pytest.raises(RuntimeError, match=match):
             await load_config(
                 token="test_token",
                 vault="TestVault",
@@ -703,7 +708,7 @@ async def test_load_config_item_not_found(mock_op_client, mock_vault):
             )
 
 
-@fixture
+@pytest.fixture
 def complex_item():
     """Mock Item with fields for ComplexConfig."""
     return Item(
@@ -740,7 +745,7 @@ def complex_item():
     )
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_load_config_complex_schema(
     mock_op_client, mock_vault, mock_item_overview, complex_item
 ):
@@ -763,7 +768,7 @@ async def test_load_config_complex_schema(
         assert result.optional_field == "custom"
 
 
-@mark.asyncio
+@pytest.mark.asyncio
 async def test_load_config_complex_schema_idempotent(
     mock_op_client, mock_vault, mock_item_overview, complex_item
 ):

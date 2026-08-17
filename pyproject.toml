@@ -76,7 +76,7 @@ docstring-code-format = true
 docstring-code-line-length = 72
 
 [tool.ruff.lint]
-select = ["A", "ANN", "B", "C", "E", "F", "FBT", "I", "N", "RUF", "S"]
+select = ["A", "ANN", "B", "C", "E", "F", "FBT", "I", "N", "PT", "RUF", "S"]
 ignore = ["ANN401"]  # deliberate `Any` in the hydration and logging helpers
 
 [tool.ruff.lint.per-file-ignores]
