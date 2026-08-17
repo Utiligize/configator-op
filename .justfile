@@ -33,7 +33,7 @@ lint-ci:
 
 # Let Ruff auto-fix what it can
 lint-fix:
-  uv run python -m ruff check --fix {{justfile_directory()}}/src
+  uv run python -m ruff check --fix {{justfile_directory()}}
 
 # Publish built package to PyPI
 publish: build
