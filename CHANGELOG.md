@@ -10,19 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Every 1Password call (`authenticate`, `vaults.list`, `items.list`, `items.get`, `secrets.resolve_all`) is now retried individually on transient failures with [stamina](https://stamina.hynek.me/) — 3 attempts, with no further attempt scheduled more than 10 seconds after the first — so a network blip no longer fails application start-up and a retry costs one request rather than a full reload. Rate-limit errors are never retried: they are logged and raised immediately, because the message carries no usable retry-after and the hourly read budget can be up to an hour from resetting. See ADR-013 ([5e63002])
-- Guard against enabling developer mode in production: when `CONFIGATOR_DEV_MODE` is set while `ENVIRONMENT` (fallback `APP_ENV`) resolves to production, instantiating a config model now raises a `RuntimeError` instead of letting a `.env` file override vetted secrets ([15b1a43])
-- `SECURITY.md` documenting the private vulnerability disclosure channel and supported-versions policy ([397b932])
+- feat: retry 1Password calls ([5e63002])
+- feat: guard CONFIGATOR_DEV_MODE against production activation ([15b1a43])
+- docs: add SECURITY.md with private disclosure policy ([397b932])
 
 ### Changed
 
-- `op://` references are now resolved in batches with `secrets.resolve_all()` instead of one `secrets.resolve()` call per field. A load costs `3 + <reference nesting depth>` 1Password requests regardless of how many fields the schema declares; measured against a real vault, resolving 14 distinct references (one of them chained) dropped from 30 reads to 2. Previously the cost grew with schema size and a crash-looping container could exhaust a service account's hourly read budget. See ADR-012 ([b2a90f8])
-- The number of 1Password requests spent on each `load_config` is logged at info level when the load completes ([b2a90f8])
-- A schema field with no matching item field and no default now raises `RuntimeError: field '<name>' not found and no default value provided` instead of the PEP 479 `RuntimeError: coroutine raised StopIteration` ([b2a90f8])
-- A chain of exactly 10 `op://` links now resolves, matching the documented depth limit; the previous implementation raised on the tenth hop and so only reached nine ([b2a90f8])
-- Ruff linting and formatting now cover the whole repository instead of only `src/`, and the `PT` (flake8-pytest-style) rule set is enabled; test modules consequently use `import pytest` and the `pytest.` namespace rather than importing `fixture`, `mark` and `raises` directly ([7243514])
-- Static type checking is now done with [Pyrefly](https://pyrefly.org/) instead of mypy, and covers `tests/` in addition to `src/` ([7844a80])
-- CI runs as three jobs — lint, test (Python 3.12/3.13/3.14) and scan — so linting fails fast instead of waiting behind the test matrix; the Sonar scan consumes the coverage report uploaded by the 3.12 test job and is skipped on draft pull requests ([e9b89e5])
+- build: replace mypy with Pyrefly for type checking ([7844a80])
+- chore: drop auto uv sync from .envrc on directory entry ([af8a42b])
+- chore: update python dependencies ([82c2a30], [168fe4f], [99405f2])
 - chore(ci): Update actions/checkout digest to 3d3c42e ([0efeae6], [8d197e2])
 - chore(ci): Update all non-major updates ([7912d7f])
 - chore(ci): Update astral-sh/setup-uv action to v8.3.2 ([6e2571b])
@@ -30,12 +26,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - chore(deps): Allow package resolution on all platforms ([6841d83])
 - chore(deps): Lock file maintenance ([e0991b6])
 - chore(deps): Update dependency twine to v7 ([0f06f5d])
-- chore: drop auto uv sync from .envrc on directory entry ([af8a42b])
-- chore: update python dependencies ([82c2a30], [168fe4f], [99405f2])
+- chore(lint): widen ruff scope to repo and enable PT rules ([7243514])
+- perf(ci): split the CI build into lint, test and scan jobs ([e9b89e5])
 
 ### Fixed
 
-- A secret reference that `resolve_all` omits from its response is now reported by name instead of being retried until the nested-reference limit, which spent ten requests and reported the misleading `the dwarves delved too greedily and too deep` ([b2a90f8])
+- fix: batch op:// reference resolution ([b2a90f8])
 
 ### Removed
 
