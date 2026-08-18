@@ -112,6 +112,9 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
   - any other value for a field defined as `bool` will raise a `ValueError`.
 - Collections (`dict`, `list`, `set`) are loaded by interpreting the string value in 1Password as JSON and passing that object to the constructor. This means that a set can be constructed from what looks like a list, for example.
 - Any string starting with `op://` will be resolved recursively (up to a depth of 10 links).
+  All references in the config item are resolved together, one batched request per level of
+  nesting, so a schema with many referencing fields costs a handful of 1Password requests
+  rather than one per field. The request count for each load is emitted as an info log line.
 
 ### Planned Features
 

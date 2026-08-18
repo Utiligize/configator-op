@@ -7,19 +7,25 @@
 # License-Filename: LICENSE.md                                                                    #
 ###################################################################################################
 
+from collections.abc import Mapping
 from functools import partial
 from importlib.metadata import version
 from json import JSONDecodeError, loads
 from typing import Any, get_origin
 
 from onepassword.client import Client as OnePasswordClient
-from onepassword.types import Item, ItemField, ItemOverview, VaultOverview
+from onepassword.types import Item, ItemField, ItemOverview, ResolveAllResponse, VaultOverview
 from pydantic import BaseModel
 from pydantic.fields import PydanticUndefined
 
 from .log import get_logger
 
 log = get_logger()
+
+# One request each for vaults.list, items.list and items.get.
+_LOOKUP_REQUESTS = 3
+_MAX_REFERENCE_DEPTH = 10
+_OP_SCHEME = "op://"
 
 
 async def load_config[T: BaseModel](*, token: str, vault: str, item: str, schema: type[T]) -> T:
@@ -38,7 +44,15 @@ async def load_config[T: BaseModel](*, token: str, vault: str, item: str, schema
 
     cfg_item = await client.items.get(vault_id=vault_overview.id, item_id=item_overview.id)
 
-    return await _hydrate_model(op_client=client, schema=schema, item=cfg_item)
+    resolved, resolve_requests = await _resolve_references(client, cfg_item)
+
+    config = _hydrate_model(resolved=resolved, schema=schema, item=cfg_item)
+    log.info(
+        "loaded configuration into schema '%s' using %d 1Password request(s)",
+        schema.__name__,
+        _LOOKUP_REQUESTS + resolve_requests,
+    )
+    return config
 
 
 def _field_matcher(field: ItemField, *, title: str, section_id: str | None = None) -> bool:
@@ -92,9 +106,9 @@ async def _get_vault_overview(
     return None
 
 
-async def _hydrate_field(
+def _hydrate_field(
     *,
-    op_client: OnePasswordClient,
+    resolved: Mapping[str, str],
     cls: type,
     item: Item,
     key: str,
@@ -108,33 +122,37 @@ async def _hydrate_field(
     origin = get_origin(cls) or cls
     if issubclass(origin, BaseModel):
         sections = _get_sections(item)
-        return await _hydrate_model(
-            op_client=op_client, schema=cls, item=item, section_id=sections[key.lower()]
+        return _hydrate_model(
+            resolved=resolved, schema=cls, item=item, section_id=sections[key.lower()]
         )
-    else:
-        matcher = partial(_field_matcher, title=key.lower(), section_id=section_id)
-        ret_val = default
-        try:
-            str_val = await _resolve_op_link(op_client, next(filter(matcher, wet_fields)).value)
-            if issubclass(origin, (dict, list, set, tuple)):
-                ret_val = cls(loads(str_val))
-            elif issubclass(origin, bool):
-                ret_val = _parse_bool(str_val)
-            else:
-                ret_val = cls(str_val)  # type: ignore[call-arg]
-        except JSONDecodeError as jde:
-            log.error("failed to parse field '%s' as JSON: %s", key, str(jde))
-            raise
-        except StopIteration:
-            if default is PydanticUndefined:
-                log.error("field '%s' not found and no default value provided", key)
-                raise
-            log.debug("using default value for field '%s'", key)
-        return ret_val
+
+    matcher = partial(_field_matcher, title=key.lower(), section_id=section_id)
+    wet_field = next(filter(matcher, wet_fields), None)
+    if wet_field is None:
+        if default is PydanticUndefined:
+            log.error("field '%s' not found and no default value provided", key)
+            raise RuntimeError(f"field '{key}' not found and no default value provided")
+        log.debug("using default value for field '%s'", key)
+        return default
+
+    str_val = resolved.get(wet_field.value, wet_field.value)
+    try:
+        if issubclass(origin, (dict, list, set, tuple)):
+            return cls(loads(str_val))
+        if issubclass(origin, bool):
+            return _parse_bool(str_val)
+        return cls(str_val)  # type: ignore[call-arg]
+    except JSONDecodeError as jde:
+        log.error("failed to parse field '%s' as JSON: %s", key, str(jde))
+        raise
 
 
-async def _hydrate_model[T: BaseModel](
-    *, op_client: OnePasswordClient, schema: type[T], item: Item, section_id: str | None = None
+def _hydrate_model[T: BaseModel](
+    *,
+    resolved: Mapping[str, str],
+    schema: type[T],
+    item: Item,
+    section_id: str | None = None,
 ) -> T:
     """Hydrate Pydantic model from 1Password item."""
     log.debug("hydrating model '%s'", schema.__name__)
@@ -147,8 +165,8 @@ async def _hydrate_model[T: BaseModel](
             log.warning("no annotation for field '%s'; skipping", key)
             continue
 
-        wet_model[key] = await _hydrate_field(
-            op_client=op_client,
+        wet_model[key] = _hydrate_field(
+            resolved=resolved,
             cls=cls,
             item=item,
             key=key,
@@ -177,17 +195,53 @@ def _parse_bool(str_val: str) -> bool:
         raise ValueError(f"cannot parse '{str_val}' as boolean")
 
 
-async def _resolve_op_link(op_client: OnePasswordClient, link: str) -> str:
-    """Resolve op:// reference to its actual value."""
-    # This counter is used to guard against circular op:// references
-    moria_level = 0
-    while link.startswith("op://"):
-        try:
-            link = await op_client.secrets.resolve(link)
-        except Exception as exc:
-            raise RuntimeError(f"failed to resolve secret reference '{link}'") from exc
-        moria_level += 1
-        if moria_level > 9:
-            log.error("too many nested op:// references when resolving '%s'", link)
+async def _resolve_all(op_client: OnePasswordClient, references: list[str]) -> ResolveAllResponse:
+    """Resolve a batch of op:// references in a single request."""
+    log.debug("resolving %d secret reference(s) in one request", len(references))
+    return await op_client.secrets.resolve_all(references)
+
+
+async def _resolve_references(
+    op_client: OnePasswordClient, item: Item
+) -> tuple[dict[str, str], int]:
+    """Resolve every op:// reference in the item, returning the values and the request count.
+
+    References are deduplicated and resolved one batch at a time, so an item with N
+    referencing fields costs one request per level of nesting rather than one per field.
+    """
+    resolved = {f.value: f.value for f in item.fields if f.value.startswith(_OP_SCHEME)}
+    requests = 0
+    while True:
+        pending = sorted({v for v in resolved.values() if v.startswith(_OP_SCHEME)})
+        if not pending:
+            return resolved, requests
+        if requests == _MAX_REFERENCE_DEPTH:
+            log.error("too many nested op:// references when resolving item '%s'", item.title)
             raise RuntimeError("the dwarves delved too greedily and too deep")
-    return link
+
+        try:
+            response = await _resolve_all(op_client, pending)
+        except Exception as exc:
+            raise RuntimeError(f"failed to resolve {len(pending)} secret reference(s)") from exc
+        requests += 1
+
+        secrets = _unwrap_resolved(response)
+        missing = [reference for reference in pending if reference not in secrets]
+        if missing:
+            log.error("1Password returned no result for %d secret reference(s)", len(missing))
+            raise RuntimeError(
+                f"1Password returned no result for secret reference(s): {', '.join(missing)}"
+            )
+        resolved = {ref: secrets.get(value, value) for ref, value in resolved.items()}
+
+
+def _unwrap_resolved(response: ResolveAllResponse) -> dict[str, str]:
+    """Return the resolved secret for each reference, raising on the first failure."""
+    secrets: dict[str, str] = {}
+    for reference, individual in response.individual_responses.items():
+        if individual.content is None:
+            raise RuntimeError(
+                f"failed to resolve secret reference '{reference}': {individual.error}"
+            )
+        secrets[reference] = individual.content.secret
+    return secrets

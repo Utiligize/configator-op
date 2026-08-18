@@ -14,6 +14,7 @@
 - [ADR-009: Provide minimal public API surface](#adr-009-provide-minimal-public-api-surface)
 - [ADR-010: Provide common configuration models as mixins](#adr-010-provide-common-configuration-models-as-mixins)
 - [ADR-011: Support developer mode with .env file priority](#adr-011-support-developer-mode-with-env-file-priority)
+- [ADR-012: Batch op:// reference resolution](#adr-012-batch-op-reference-resolution)
 
 ## ADR-001: Use Structlog for logging
 
@@ -220,7 +221,7 @@ Recursively resolve `op://` references using the SDK's `secrets.resolve()` metho
   - Transitive resolution: References to references work transparently.
 
 - Costs / Trade-offs
-  - Performance: Each reference resolution is an SDK call (network latency).
+  - Performance: References cost 1Password requests; see [ADR-012](#adr-012-batch-op-reference-resolution) for how they are batched.
   - Complexity: Nested references harder to debug.
   - Recursion limit: Circular references fail at runtime after 10 iterations.
   - Error messages: Deep reference chains make error messages less clear about source location.
@@ -447,3 +448,56 @@ All common configuration models (`PostgresConfig`, `SentryConfig`) extend `Confi
   - Must understand priority: Know which source wins in each mode.
   - Explicit opt-in: Developer mode must be deliberately enabled.
   - Standard patterns: Follows familiar .env file conventions from other frameworks.
+
+## ADR-012: Batch op:// reference resolution
+
+**Date:** 2026-08-18
+
+**Context:**
+
+Resolving each `op://` reference with its own `secrets.resolve()` call made the cost of a
+`load_config` proportional to the number of schema fields. A real schema with 87 annotated
+fields cost roughly 90 1Password requests per load. Because nothing is cached between
+process starts, a container crash-looping under `--restart unless-stopped` multiplied that
+figure by the restart count and exhausted a service account's hourly read budget
+(10,000 requests), after which neither the application nor the deploy tooling could reach
+1Password until the window reset.
+
+**Decision:**
+
+Resolve references in batches instead of one at a time. After the config item is fetched,
+collect every field value beginning with `op://`, deduplicate them, and resolve the whole
+set with a single `secrets.resolve_all()` call. Chained references are followed by repeating
+the batch, one request per level of nesting, keeping the ADR-006 depth limit of 10. The
+limit is enforced as ten resolution rounds, so a chain of exactly ten links now resolves;
+the previous per-field implementation raised on the tenth hop and therefore only reached
+nine. Hydration then reads from the resolved mapping and performs no I/O, so `_hydrate_model`
+and `_hydrate_field` are synchronous. The total request count for a load is logged at info level.
+
+**Consequences:**
+
+- Benefits
+  - Bounded cost: a load costs `3 + depth` requests regardless of how many fields the schema declares. Measured against the `REPO configator` vault, resolving 14 distinct references (one of them chained one level) cost 30 reads before and 2 after.
+  - Crash-loop safety: a restarting container can no longer exhaust an hourly token budget on its own.
+  - Deduplication: a reference repeated across fields is resolved once.
+  - Lower latency: one round trip per nesting level instead of one per field.
+  - Observability: the per-load request count appears in startup logs.
+  - Simpler retry seam: retry logic (see UT-9205) wraps one batch call rather than N per-field calls.
+
+- Costs / Trade-offs
+  - Every `op://` field in the config item is resolved, including fields the schema does not
+    declare. Batched into the same request this is effectively free, but the values are fetched.
+  - `resolve_all` reports per-reference failures in its response rather than raising, so failures
+    are surfaced by inspecting the response instead of by exception. A reference the response
+    omits entirely is reported by name rather than retried, since retrying it could not make
+    progress and would otherwise be misreported as an over-deep reference chain.
+  - A missing required field now raises `RuntimeError` directly; previously the `StopIteration`
+    from the field lookup was converted to `RuntimeError` by PEP 479 because the hydrator was async.
+
+- Operational considerations
+  - Requires `onepassword-sdk` with `secrets.resolve_all` (0.3 and later).
+  - Startup logs record the request count, so regressions in load cost are visible without instrumentation.
+
+- Developer impact
+  - No change to schema definitions or to the `load_config` signature.
+  - Deep reference chains still cost one request per level, so keeping chains shallow remains worthwhile.
