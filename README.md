@@ -115,6 +115,11 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
   All references in the config item are resolved together, one batched request per level of
   nesting, so a schema with many referencing fields costs a handful of 1Password requests
   rather than one per field. The request count for each load is emitted as an info log line.
+- Every 1Password call is retried individually on transient failures (3 attempts, capped at
+  10 seconds in total), so a retry costs one request rather than a full reload. Rate-limit
+  errors are never retried: they are logged and raised immediately, because the hourly read
+  budget can be up to an hour from resetting and each retry would spend a request against a
+  budget that is already empty.
 
 ### Planned Features
 

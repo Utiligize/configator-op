@@ -14,9 +14,11 @@ from json import JSONDecodeError, loads
 from typing import Any, get_origin
 
 from onepassword.client import Client as OnePasswordClient
+from onepassword.errors import RateLimitExceededException
 from onepassword.types import Item, ItemField, ItemOverview, ResolveAllResponse, VaultOverview
 from pydantic import BaseModel
 from pydantic.fields import PydanticUndefined
+from stamina import retry
 
 from .log import get_logger
 
@@ -26,6 +28,37 @@ log = get_logger()
 _LOOKUP_REQUESTS = 3
 _MAX_REFERENCE_DEPTH = 10
 _OP_SCHEME = "op://"
+
+# Kept well inside a typical container start-up budget (gunicorn's 30 s worker timeout,
+# the deploy tooling's 120 s readiness wait) so a partial 1Password outage reads as a slow
+# start rather than a failed deploy.
+_RETRY_ATTEMPTS = 3
+_RETRY_TIMEOUT = 10.0
+_RETRY_WAIT_INITIAL = 0.2
+_RETRY_WAIT_MAX = 2.0
+
+
+def _is_transient(exc: Exception) -> bool:
+    """Return True for errors worth retrying; a rate limit never is.
+
+    A rate-limited response reports no usable retry-after and the hourly read
+    budget can be up to an hour from resetting, so every retry is another
+    request spent against a budget that is already empty.
+    """
+    if isinstance(exc, RateLimitExceededException):
+        log.error("1Password rate limit exceeded; not retrying: %s", str(exc))
+        return False
+    return True
+
+
+_retry = partial(
+    retry,
+    on=_is_transient,
+    attempts=_RETRY_ATTEMPTS,
+    timeout=_RETRY_TIMEOUT,
+    wait_initial=_RETRY_WAIT_INITIAL,
+    wait_max=_RETRY_WAIT_MAX,
+)
 
 
 async def load_config[T: BaseModel](*, token: str, vault: str, item: str, schema: type[T]) -> T:
@@ -42,7 +75,7 @@ async def load_config[T: BaseModel](*, token: str, vault: str, item: str, schema
     if item_overview is None:
         raise RuntimeError(f"item '{item}' not found in vault {vault}")
 
-    cfg_item = await client.items.get(vault_id=vault_overview.id, item_id=item_overview.id)
+    cfg_item = await _get_item(client, vault_overview.id, item_overview.id)
 
     resolved, resolve_requests = await _resolve_references(client, cfg_item)
 
@@ -61,6 +94,7 @@ def _field_matcher(field: ItemField, *, title: str, section_id: str | None = Non
     return normalized_title == title and (section_id is None or field.section_id == section_id)
 
 
+@_retry()
 async def _get_client(token: str) -> OnePasswordClient:
     """Initialize 1Password client."""
     pkg_name = "configator_op"
@@ -75,6 +109,14 @@ async def _get_client(token: str) -> OnePasswordClient:
     return op_client
 
 
+@_retry()
+async def _get_item(op_client: OnePasswordClient, vault_id: str, item_id: str) -> Item:
+    """Retrieve the config item."""
+    log.debug("retrieving item '%s' from vault '%s'", item_id, vault_id)
+    return await op_client.items.get(vault_id=vault_id, item_id=item_id)
+
+
+@_retry()
 async def _get_item_overview(
     op_client: OnePasswordClient, vault_id: str, item_name: str
 ) -> ItemOverview | None:
@@ -93,6 +135,7 @@ def _get_sections(item: Item) -> dict[str, str]:
     return {s.title.lower(): s.id for s in item.sections if s.title}
 
 
+@_retry()
 async def _get_vault_overview(
     op_client: OnePasswordClient, vault_name: str
 ) -> VaultOverview | None:
@@ -195,6 +238,7 @@ def _parse_bool(str_val: str) -> bool:
         raise ValueError(f"cannot parse '{str_val}' as boolean")
 
 
+@_retry()
 async def _resolve_all(op_client: OnePasswordClient, references: list[str]) -> ResolveAllResponse:
     """Resolve a batch of op:// references in a single request."""
     log.debug("resolving %d secret reference(s) in one request", len(references))

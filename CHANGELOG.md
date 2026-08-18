@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Every 1Password call (`authenticate`, `vaults.list`, `items.list`, `items.get`, `secrets.resolve_all`) is now retried individually on transient failures with [stamina](https://stamina.hynek.me/) — 3 attempts capped at 10 seconds in total — so a network blip no longer fails application start-up and a retry costs one request rather than a full reload. Rate-limit errors are never retried: they are logged and raised immediately, because the message carries no usable retry-after and the hourly read budget can be up to an hour from resetting. See ADR-013
 - Guard against enabling developer mode in production: when `CONFIGATOR_DEV_MODE` is set while `ENVIRONMENT` (fallback `APP_ENV`) resolves to production, instantiating a config model now raises a `RuntimeError` instead of letting a `.env` file override vetted secrets
 - `SECURITY.md` documenting the private vulnerability disclosure channel and supported-versions policy
 
