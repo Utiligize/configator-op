@@ -482,20 +482,22 @@ async def test_resolve_references_chained_links(mock_op_client):
 async def test_resolve_references_resolution_error(mock_op_client):
     """Test that a failed reference is reported with its own name."""
     mock_op_client.secrets.resolve_all.return_value = _resolve_all_error("op://vault/item/field")
+    item = _item_with_values("op://vault/item/field")
 
     with pytest.raises(
         RuntimeError, match="failed to resolve secret reference 'op://vault/item/field'"
     ):
-        await _resolve_references(mock_op_client, _item_with_values("op://vault/item/field"))
+        await _resolve_references(mock_op_client, item)
 
 
 @pytest.mark.asyncio
 async def test_resolve_references_request_error(mock_op_client):
     """Test that a failing batch request is reported as a RuntimeError."""
     mock_op_client.secrets.resolve_all.side_effect = Exception("Too many requests")
+    item = _item_with_values("op://vault/item/field")
 
     with pytest.raises(RuntimeError, match="failed to resolve 1 secret reference"):
-        await _resolve_references(mock_op_client, _item_with_values("op://vault/item/field"))
+        await _resolve_references(mock_op_client, item)
 
 
 @pytest.mark.asyncio
@@ -519,9 +521,10 @@ async def test_resolve_references_too_deep(mock_op_client):
     mock_op_client.secrets.resolve_all.return_value = _resolve_all_response(
         {"op://vault/item/field": "op://vault/item/field"}
     )
+    item = _item_with_values("op://vault/item/field")
 
     with pytest.raises(RuntimeError, match="the dwarves delved too greedily and too deep"):
-        await _resolve_references(mock_op_client, _item_with_values("op://vault/item/field"))
+        await _resolve_references(mock_op_client, item)
 
     assert mock_op_client.secrets.resolve_all.await_count == _MAX_REFERENCE_DEPTH
 
@@ -532,13 +535,11 @@ async def test_resolve_references_missing_from_response(mock_op_client):
     mock_op_client.secrets.resolve_all.return_value = _resolve_all_response(
         {"op://vault/item/present": "secret"}
     )
+    item = _item_with_values("op://vault/item/present", "op://vault/item/absent")
 
     match = "1Password returned no result for secret reference"
     with pytest.raises(RuntimeError, match=match):
-        await _resolve_references(
-            mock_op_client,
-            _item_with_values("op://vault/item/present", "op://vault/item/absent"),
-        )
+        await _resolve_references(mock_op_client, item)
 
     assert mock_op_client.secrets.resolve_all.await_count == 1
 
