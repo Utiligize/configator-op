@@ -43,11 +43,15 @@ from configator.core import (
     load_config,
 )
 
+# Stated independently of the production constant so that lowering the retry budget
+# fails the retry tests instead of silently changing what they assert.
+EXPECTED_RETRY_ATTEMPTS = 3
+
 
 @pytest.fixture(autouse=True)
 def _instant_retries():
     """Keep the retry attempt count but drop the backoff waits."""
-    with stamina.set_testing(True, attempts=_RETRY_ATTEMPTS):
+    with stamina.set_testing(True, attempts=EXPECTED_RETRY_ATTEMPTS, cap=True):
         yield
 
 
@@ -267,6 +271,11 @@ async def test_get_item_overview_empty_list(mock_op_client):
 
 
 # Tests for retry behavior
+def test_retry_attempts_match_policy():
+    """Test that the retry budget is the one the retry tests assume."""
+    assert _RETRY_ATTEMPTS == EXPECTED_RETRY_ATTEMPTS
+
+
 def test_is_transient_rate_limit():
     """Test that a rate-limit error is terminal."""
     assert _is_transient(RateLimitExceededException("Too many requests")) is False
@@ -611,7 +620,7 @@ async def test_resolve_references_request_error(mock_op_client):
     with pytest.raises(RuntimeError, match="failed to resolve 1 secret reference"):
         await _resolve_references(mock_op_client, item)
 
-    assert mock_op_client.secrets.resolve_all.await_count == _RETRY_ATTEMPTS
+    assert mock_op_client.secrets.resolve_all.await_count == EXPECTED_RETRY_ATTEMPTS
 
 
 @pytest.mark.asyncio
