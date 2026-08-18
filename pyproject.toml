@@ -21,6 +21,7 @@ dependencies = [
   "onepassword-sdk>=0.3,<0.5",
   "pydantic-settings>=2.12,<3",
   "pydantic>=2,<3",
+  "stamina>=25.1,<27",
   "structlog>=25,<27",
 ]
 

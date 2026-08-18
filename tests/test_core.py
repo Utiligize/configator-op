@@ -3,6 +3,7 @@
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
+from onepassword.errors import RateLimitExceededException
 from onepassword.types import (
     Item,
     ItemField,
@@ -22,21 +23,36 @@ except ImportError:
     # onepassword-sdk<0.4
     VaultType = None
 import pytest
+import stamina
 from pydantic import BaseModel
 
 from configator.core import (
     _MAX_REFERENCE_DEPTH,
+    _RETRY_ATTEMPTS,
     _field_matcher,
     _get_client,
+    _get_item,
     _get_item_overview,
     _get_sections,
     _get_vault_overview,
     _hydrate_model,
+    _is_transient,
     _op_field_name_to_lower_snake_case,
     _parse_bool,
     _resolve_references,
     load_config,
 )
+
+# Stated independently of the production constant so that lowering the retry budget
+# fails the retry tests instead of silently changing what they assert.
+EXPECTED_RETRY_ATTEMPTS = 3
+
+
+@pytest.fixture(autouse=True)
+def _instant_retries():
+    """Keep the retry attempt count but drop the backoff waits."""
+    with stamina.set_testing(True, attempts=EXPECTED_RETRY_ATTEMPTS, cap=True):
+        yield
 
 
 # Test schemas
@@ -252,6 +268,111 @@ async def test_get_item_overview_empty_list(mock_op_client):
     mock_op_client.items.list.return_value = []
     result = await _get_item_overview(mock_op_client, "vault123", "TestItem")
     assert result is None
+
+
+# Tests for retry behavior
+def test_retry_attempts_match_policy():
+    """Test that the retry budget is the one the retry tests assume."""
+    assert _RETRY_ATTEMPTS == EXPECTED_RETRY_ATTEMPTS
+
+
+def test_is_transient_rate_limit():
+    """Test that a rate-limit error is terminal."""
+    assert _is_transient(RateLimitExceededException("Too many requests")) is False
+
+
+def test_is_transient_other_error():
+    """Test that any other error is retried."""
+    assert _is_transient(Exception("connection reset")) is True
+
+
+@pytest.mark.asyncio
+async def test_get_client_retries_transient_error():
+    """Test that a transient authentication failure is retried."""
+    with patch("configator.core.OnePasswordClient.authenticate") as mock_auth:
+        client = AsyncMock()
+        mock_auth.side_effect = [Exception("connection reset"), client]
+
+        assert await _get_client("test_token") is client
+        assert mock_auth.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_get_client_rate_limit_is_not_retried():
+    """Test that a rate-limited authentication costs exactly one request."""
+    with patch("configator.core.OnePasswordClient.authenticate") as mock_auth:
+        mock_auth.side_effect = RateLimitExceededException("Too many requests")
+
+        with pytest.raises(RateLimitExceededException):
+            await _get_client("test_token")
+
+        assert mock_auth.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_get_vault_overview_retries_transient_error(mock_op_client, mock_vault):
+    """Test that a transient vault listing failure is retried."""
+    mock_op_client.vaults.list.side_effect = [Exception("connection reset"), [mock_vault]]
+
+    result = await _get_vault_overview(mock_op_client, "TestVault")
+
+    assert result == mock_vault
+    assert mock_op_client.vaults.list.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_get_vault_overview_rate_limit_is_not_retried(mock_op_client):
+    """Test that a rate-limited vault listing costs exactly one request."""
+    mock_op_client.vaults.list.side_effect = RateLimitExceededException("Too many requests")
+
+    with pytest.raises(RateLimitExceededException):
+        await _get_vault_overview(mock_op_client, "TestVault")
+
+    assert mock_op_client.vaults.list.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_get_item_overview_retries_transient_error(mock_op_client, mock_item_overview):
+    """Test that a transient item listing failure is retried."""
+    mock_op_client.items.list.side_effect = [Exception("connection reset"), [mock_item_overview]]
+
+    result = await _get_item_overview(mock_op_client, "vault123", "TestItem")
+
+    assert result == mock_item_overview
+    assert mock_op_client.items.list.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_get_item_overview_rate_limit_is_not_retried(mock_op_client):
+    """Test that a rate-limited item listing costs exactly one request."""
+    mock_op_client.items.list.side_effect = RateLimitExceededException("Too many requests")
+
+    with pytest.raises(RateLimitExceededException):
+        await _get_item_overview(mock_op_client, "vault123", "TestItem")
+
+    assert mock_op_client.items.list.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_get_item_retries_transient_error(mock_op_client, mock_item):
+    """Test that a transient item retrieval failure is retried."""
+    mock_op_client.items.get.side_effect = [Exception("connection reset"), mock_item]
+
+    result = await _get_item(mock_op_client, "vault123", "item456")
+
+    assert result == mock_item
+    assert mock_op_client.items.get.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_get_item_rate_limit_is_not_retried(mock_op_client):
+    """Test that a rate-limited item retrieval costs exactly one request."""
+    mock_op_client.items.get.side_effect = RateLimitExceededException("Too many requests")
+
+    with pytest.raises(RateLimitExceededException):
+        await _get_item(mock_op_client, "vault123", "item456")
+
+    assert mock_op_client.items.get.await_count == 1
 
 
 # Tests for _get_sections
@@ -492,12 +613,45 @@ async def test_resolve_references_resolution_error(mock_op_client):
 
 @pytest.mark.asyncio
 async def test_resolve_references_request_error(mock_op_client):
-    """Test that a failing batch request is reported as a RuntimeError."""
-    mock_op_client.secrets.resolve_all.side_effect = Exception("Too many requests")
+    """Test that a batch request failing every attempt is reported as a RuntimeError."""
+    mock_op_client.secrets.resolve_all.side_effect = Exception("connection reset")
     item = _item_with_values("op://vault/item/field")
 
     with pytest.raises(RuntimeError, match="failed to resolve 1 secret reference"):
         await _resolve_references(mock_op_client, item)
+
+    assert mock_op_client.secrets.resolve_all.await_count == EXPECTED_RETRY_ATTEMPTS
+
+
+@pytest.mark.asyncio
+async def test_resolve_references_retries_transient_error(mock_op_client):
+    """Test that a transient batch failure is retried and the load completes."""
+    mock_op_client.secrets.resolve_all.side_effect = [
+        Exception("connection reset"),
+        _resolve_all_response({"op://vault/item/field": "secret"}),
+    ]
+
+    resolved, requests = await _resolve_references(
+        mock_op_client, _item_with_values("op://vault/item/field")
+    )
+
+    assert resolved == {"op://vault/item/field": "secret"}
+    assert requests == 1
+    assert mock_op_client.secrets.resolve_all.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_resolve_references_rate_limit_is_not_retried(mock_op_client):
+    """Test that a rate-limited batch request costs exactly one request."""
+    mock_op_client.secrets.resolve_all.side_effect = RateLimitExceededException(
+        "Too many requests. Your client has been rate-limited. Try again in  seconds"
+    )
+    item = _item_with_values("op://vault/item/field")
+
+    with pytest.raises(RuntimeError, match="failed to resolve 1 secret reference"):
+        await _resolve_references(mock_op_client, item)
+
+    assert mock_op_client.secrets.resolve_all.await_count == 1
 
 
 @pytest.mark.asyncio

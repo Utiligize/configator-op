@@ -15,6 +15,7 @@
 - [ADR-010: Provide common configuration models as mixins](#adr-010-provide-common-configuration-models-as-mixins)
 - [ADR-011: Support developer mode with .env file priority](#adr-011-support-developer-mode-with-env-file-priority)
 - [ADR-012: Batch op:// reference resolution](#adr-012-batch-op-reference-resolution)
+- [ADR-013: Retry 1Password calls, but never a rate limit](#adr-013-retry-1password-calls-but-never-a-rate-limit)
 
 ## ADR-001: Use Structlog for logging
 
@@ -501,3 +502,71 @@ and `_hydrate_field` are synchronous. The total request count for a load is logg
 - Developer impact
   - No change to schema definitions or to the `load_config` signature.
   - Deep reference chains still cost one request per level, so keeping chains shallow remains worthwhile.
+
+## ADR-013: Retry 1Password calls, but never a rate limit
+
+**Date:** 2026-08-18
+
+**Context:**
+
+A `load_config` is a chain of network calls, and any of them can fail on a transient
+network blip. Without retries a single blip fails application start-up, which under a
+container restart policy turns into a restart and a fresh set of 1Password requests.
+
+Retrying is not universally safe, though. When a service account exceeds its hourly read
+budget the SDK raises `RateLimitExceededException`, whose message carries no usable
+retry-after (`Try again in  seconds`). Retrying that spends further requests against an
+empty budget that may be up to an hour from resetting, and no retry policy has a sensible
+upper bound on that timescale. A crash loop retrying rate-limit errors is exactly how the
+develop environment locked itself out of 1Password.
+
+**Decision:**
+
+Use [stamina](https://stamina.hynek.me/) to retry each 1Password call individually —
+`Client.authenticate`, `vaults.list`, `items.list`, `items.get` and `secrets.resolve_all`
+— rather than wrapping the whole load. A retry therefore costs one request, not a reload
+of every reference.
+
+Retries are governed by a predicate, `_is_transient`, which treats
+`RateLimitExceededException` as terminal (logging an error before it propagates) and every
+other exception as worth retrying. The SDK collapses network failures into a bare
+`Exception` with a message rather than a typed error, so an allow-list of exception types
+would never fire; a deny-list anchored on the one typed error that matters is both simpler
+and effective. The cost is that a permanent failure such as a bad token is attempted three
+times instead of once.
+
+The budget is 3 attempts with waits from 0.2 s to 2 s, and no further attempt is scheduled
+more than 10 seconds after the first. That fits inside a gunicorn worker timeout of 30 s and
+leaves room in the deploy tooling's 120 s readiness wait, so a partial 1Password outage reads
+as a slow start rather than a failed deploy.
+
+**Consequences:**
+
+- Benefits
+  - A transient failure no longer fails application start-up.
+  - A retry re-spends one request, not the whole load.
+  - Rate limiting fails fast and is logged as such, so a restarting container cannot deepen
+    the hole it is in.
+  - Retry attempts are reported through stamina's instrumentation, which uses structlog when
+    it is installed (see [ADR-001](#adr-001-use-structlog-for-logging)).
+
+- Costs / Trade-offs
+  - Adds a runtime dependency on stamina (and its tenacity dependency).
+  - Terminal non-rate-limit failures (bad token, revoked access) cost three attempts.
+  - Worst case a load takes about 10 seconds longer per failing call than it used to.
+  - The timeout bounds the scheduling of retries, not the duration of any single call. The
+    SDK exposes no request timeout, so a request that hangs rather than fails still hangs;
+    bounding that would require wrapping the whole load in an `asyncio.timeout`, which is a
+    separate decision about whether a load may abort an in-flight request.
+  - The request count logged on a successful load counts logical requests, not retried
+    attempts, so it under-reports when a retry occurred.
+
+- Operational considerations
+  - Retries multiply with the container restart policy; a bounded restart count remains
+    necessary to keep a persistent failure from burning quota.
+  - The retry budget is deliberately tied to deployment timeouts; revisit it if those change.
+
+- Developer impact
+  - No change to the `load_config` signature or to schema definitions.
+  - Tests that exercise failure paths should use `stamina.set_testing()` so retries do not
+    add backoff waits to the suite.
