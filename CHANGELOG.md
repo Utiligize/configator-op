@@ -6,38 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3000.6.0] - 2026-08-18
+
 ### Added
 
-- Every 1Password call (`authenticate`, `vaults.list`, `items.list`, `items.get`, `secrets.resolve_all`) is now retried individually on transient failures with [stamina](https://stamina.hynek.me/) — 3 attempts, with no further attempt scheduled more than 10 seconds after the first — so a network blip no longer fails application start-up and a retry costs one request rather than a full reload. Rate-limit errors are never retried: they are logged and raised immediately, because the message carries no usable retry-after and the hourly read budget can be up to an hour from resetting. See ADR-013
-- Guard against enabling developer mode in production: when `CONFIGATOR_DEV_MODE` is set while `ENVIRONMENT` (fallback `APP_ENV`) resolves to production, instantiating a config model now raises a `RuntimeError` instead of letting a `.env` file override vetted secrets
-- `SECURITY.md` documenting the private vulnerability disclosure channel and supported-versions policy
+- Every 1Password call (`authenticate`, `vaults.list`, `items.list`, `items.get`, `secrets.resolve_all`) is now retried individually on transient failures with [stamina](https://stamina.hynek.me/) — 3 attempts, with no further attempt scheduled more than 10 seconds after the first — so a network blip no longer fails application start-up and a retry costs one request rather than a full reload. Rate-limit errors are never retried: they are logged and raised immediately, because the message carries no usable retry-after and the hourly read budget can be up to an hour from resetting. See ADR-013 ([5e63002])
+- Guard against enabling developer mode in production: when `CONFIGATOR_DEV_MODE` is set while `ENVIRONMENT` (fallback `APP_ENV`) resolves to production, instantiating a config model now raises a `RuntimeError` instead of letting a `.env` file override vetted secrets ([15b1a43])
+- `SECURITY.md` documenting the private vulnerability disclosure channel and supported-versions policy ([397b932])
 
 ### Changed
 
-- `op://` references are now resolved in batches with `secrets.resolve_all()` instead of one `secrets.resolve()` call per field. A load costs `3 + <reference nesting depth>` 1Password requests regardless of how many fields the schema declares; measured against a real vault, resolving 14 distinct references (one of them chained) dropped from 30 reads to 2. Previously the cost grew with schema size and a crash-looping container could exhaust a service account's hourly read budget. See ADR-012
-- The number of 1Password requests spent on each `load_config` is logged at info level when the load completes
-- A schema field with no matching item field and no default now raises `RuntimeError: field '<name>' not found and no default value provided` instead of the PEP 479 `RuntimeError: coroutine raised StopIteration`
-- A chain of exactly 10 `op://` links now resolves, matching the documented depth limit; the previous implementation raised on the tenth hop and so only reached nine
-- Ruff linting and formatting now cover the whole repository instead of only `src/`, and the `PT` (flake8-pytest-style) rule set is enabled; test modules consequently use `import pytest` and the `pytest.` namespace rather than importing `fixture`, `mark` and `raises` directly
-- Static type checking is now done with [Pyrefly](https://pyrefly.org/) instead of mypy, and covers `tests/` in addition to `src/`
-- CI runs as three jobs — lint, test (Python 3.12/3.13/3.14) and scan — so linting fails fast instead of waiting behind the test matrix; the Sonar scan consumes the coverage report uploaded by the 3.12 test job and is skipped on draft pull requests
-- chore(ci): Update actions/checkout digest to 3d3c42e
-- chore(ci): Update all non-major updates
-- chore(ci): Update astral-sh/setup-uv action to v8.3.2
-- chore(ci): Update astral-sh/setup-uv action to v9
-- chore(deps): Allow package resolution on all platforms
-- chore(deps): Lock file maintenance
-- chore(deps): Update dependency twine to v7
-- chore: drop auto uv sync from .envrc on directory entry
-- chore: update python dependencies
+- `op://` references are now resolved in batches with `secrets.resolve_all()` instead of one `secrets.resolve()` call per field. A load costs `3 + <reference nesting depth>` 1Password requests regardless of how many fields the schema declares; measured against a real vault, resolving 14 distinct references (one of them chained) dropped from 30 reads to 2. Previously the cost grew with schema size and a crash-looping container could exhaust a service account's hourly read budget. See ADR-012 ([b2a90f8])
+- The number of 1Password requests spent on each `load_config` is logged at info level when the load completes ([b2a90f8])
+- A schema field with no matching item field and no default now raises `RuntimeError: field '<name>' not found and no default value provided` instead of the PEP 479 `RuntimeError: coroutine raised StopIteration` ([b2a90f8])
+- A chain of exactly 10 `op://` links now resolves, matching the documented depth limit; the previous implementation raised on the tenth hop and so only reached nine ([b2a90f8])
+- Ruff linting and formatting now cover the whole repository instead of only `src/`, and the `PT` (flake8-pytest-style) rule set is enabled; test modules consequently use `import pytest` and the `pytest.` namespace rather than importing `fixture`, `mark` and `raises` directly ([7243514])
+- Static type checking is now done with [Pyrefly](https://pyrefly.org/) instead of mypy, and covers `tests/` in addition to `src/` ([7844a80])
+- CI runs as three jobs — lint, test (Python 3.12/3.13/3.14) and scan — so linting fails fast instead of waiting behind the test matrix; the Sonar scan consumes the coverage report uploaded by the 3.12 test job and is skipped on draft pull requests ([e9b89e5])
+- chore(ci): Update actions/checkout digest to 3d3c42e ([0efeae6], [8d197e2])
+- chore(ci): Update all non-major updates ([7912d7f])
+- chore(ci): Update astral-sh/setup-uv action to v8.3.2 ([6e2571b])
+- chore(ci): Update astral-sh/setup-uv action to v9 ([387f552])
+- chore(deps): Allow package resolution on all platforms ([6841d83])
+- chore(deps): Lock file maintenance ([e0991b6])
+- chore(deps): Update dependency twine to v7 ([0f06f5d])
+- chore: drop auto uv sync from .envrc on directory entry ([af8a42b])
+- chore: update python dependencies ([82c2a30], [168fe4f], [99405f2])
 
 ### Fixed
 
-- A secret reference that `resolve_all` omits from its response is now reported by name instead of being retried until the nested-reference limit, which spent ten requests and reported the misleading `the dwarves delved too greedily and too deep`
+- A secret reference that `resolve_all` omits from its response is now reported by name instead of being retried until the nested-reference limit, which spent ten requests and reported the misleading `the dwarves delved too greedily and too deep` ([b2a90f8])
 
 ### Removed
 
-- ci: disable dependabot
+- ci: disable dependabot ([04b8024])
 
 ## [3000.5.0] - 2026-06-25
 
@@ -160,7 +162,8 @@ Initial release.
 
 <!-- markdownlint-disable-file MD024 -->
 
-[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.5.0...HEAD
+[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.6.0...HEAD
+[3000.6.0]: https://github.com/Utiligize/configator-op/compare/v3000.5.0...v3000.6.0
 [3000.5.0]: https://github.com/Utiligize/configator-op/compare/v3000.4.1...v3000.5.0
 [3000.4.1]: https://github.com/Utiligize/configator-op/compare/v3000.4.0...v3000.4.1
 [3000.4.0]: https://github.com/Utiligize/configator-op/compare/v3000.3.0...v3000.4.0
@@ -175,35 +178,55 @@ Initial release.
 <!-- only slugs below here -->
 [01b9485]: https://github.com/Utiligize/configator-op/commit/01b9485654832e82861cc8c7a390cc190f38daf4
 [03c114f]: https://github.com/Utiligize/configator-op/commit/03c114f08b5d0249bf2dfa4ad068871c43e89afb
+[04b8024]: https://github.com/Utiligize/configator-op/commit/04b80240e580628ac7a7b6bdb72035cadf6c3d83
 [0ddc16a]: https://github.com/Utiligize/configator-op/commit/0ddc16ac3e8e0637137bf93146630198215d6546
+[0efeae6]: https://github.com/Utiligize/configator-op/commit/0efeae6f81e3dbecc5fcaea0afb9e564e6017331
+[0f06f5d]: https://github.com/Utiligize/configator-op/commit/0f06f5dd44d54f23a0b76c9ae5d0412913de348b
 [147834f]: https://github.com/Utiligize/configator-op/commit/147834f243868ecfe27152aad4251982b4755dbd
+[15b1a43]: https://github.com/Utiligize/configator-op/commit/15b1a433c56a790715da5746d4beb50a7a1ca25d
+[168fe4f]: https://github.com/Utiligize/configator-op/commit/168fe4f088df17c34782a14a07d9b8ef78b16f2d
 [18f5bb9]: https://github.com/Utiligize/configator-op/commit/18f5bb9d1741cc91ffe88a56f9c0b4ea8e212972
 [2aa9d2e]: https://github.com/Utiligize/configator-op/commit/2aa9d2e884ba7e99ecdd6cf73ef10f2721340cb9
 [2fbb13e]: https://github.com/Utiligize/configator-op/commit/2fbb13e9ab59dd72fce7f8d70cde51398d75f814
+[387f552]: https://github.com/Utiligize/configator-op/commit/387f5525824ab4f6f2efde1d3b97c8758e3678d3
+[397b932]: https://github.com/Utiligize/configator-op/commit/397b9329e21509d89d965807807b388b49da5dc0
 [4de6b3e]: https://github.com/Utiligize/configator-op/commit/4de6b3e5bcc06d921f3c263dd692c5ecdf95762c
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f
 [5216dfc]: https://github.com/Utiligize/configator-op/commit/5216dfc83b3b52cea84a62e7d62cfbe9c6e1b625
 [579567d]: https://github.com/Utiligize/configator-op/commit/579567d6bd872896f25d8f0b8f9e2773407bcb59
 [5bd3fb9]: https://github.com/Utiligize/configator-op/commit/5bd3fb9456d2bb37fc494cc6acb8d28349754709
 [5ddbe83]: https://github.com/Utiligize/configator-op/commit/5ddbe839ddbb42fe72c1d5acffa2751ced5f967c
+[5e63002]: https://github.com/Utiligize/configator-op/commit/5e6300203382896eed1b4b5a12c3fd51ce55453f
 [6026bdf]: https://github.com/Utiligize/configator-op/commit/6026bdf39955a68efa803a9a28b8133ce458c68e
 [6269c0b]: https://github.com/Utiligize/configator-op/commit/6269c0bbedd9819b672c0df25698e1544b23196e
+[6841d83]: https://github.com/Utiligize/configator-op/commit/6841d83439f77b919c00ff385940e8104fb546d6
 [6df3acd]: https://github.com/Utiligize/configator-op/commit/6df3acdef891c6b60b90ea96c128b317956b1671
+[6e2571b]: https://github.com/Utiligize/configator-op/commit/6e2571bc009eb775d182c7a81493f9cf08ce8865
+[7243514]: https://github.com/Utiligize/configator-op/commit/72435140f8fbc0d59f39516efe5290a2828db513
 [7569cb8]: https://github.com/Utiligize/configator-op/commit/7569cb8540028800570513411a5ab5291ab45cc6
 [76d4594]: https://github.com/Utiligize/configator-op/commit/76d459490bc57f3261ca5561b60dfb8768eb3c7c
+[7844a80]: https://github.com/Utiligize/configator-op/commit/7844a80839d61114bd7578d36bdca8c50c14483a
 [7880b48]: https://github.com/Utiligize/configator-op/commit/7880b4823ff164718a2bc86627af810ac00daf82
+[7912d7f]: https://github.com/Utiligize/configator-op/commit/7912d7f109534dc8c114b4aa56c08fd1ac7a049e
+[82c2a30]: https://github.com/Utiligize/configator-op/commit/82c2a30e95e185b41eb5c519243a16228b90e98a
 [85f0dca]: https://github.com/Utiligize/configator-op/commit/85f0dca1f85a306ca792544483aeddccdc7cad61
+[8d197e2]: https://github.com/Utiligize/configator-op/commit/8d197e2eb7183d4616e9cc214dcab4084bf75477
 [91d626f]: https://github.com/Utiligize/configator-op/commit/91d626fb2d31c6d01df2a31af02c4d43972e10c2
 [94d14ec]: https://github.com/Utiligize/configator-op/commit/94d14eccdec1257c717d4becae2b8e7f39a4add2
 [9688a7c]: https://github.com/Utiligize/configator-op/commit/9688a7c1da90d13ce2d54bd270ab6a7e3f3e5de1
 [973cbc0]: https://github.com/Utiligize/configator-op/commit/973cbc0a9a8b055c20a48c8992f15b7c7eed0fb6
 [981fc8f]: https://github.com/Utiligize/configator-op/commit/981fc8f4087cef661888e93bf8d147a085f04dc6
+[99405f2]: https://github.com/Utiligize/configator-op/commit/99405f2b6fd941be0db12201c4a44c0c065babcb
 [9e302e2]: https://github.com/Utiligize/configator-op/commit/9e302e207124fdabdbbf3a358dcb971d9edf7e9c
+[af8a42b]: https://github.com/Utiligize/configator-op/commit/af8a42bb59c2767724102d2a85d8f191ff53620d
+[b2a90f8]: https://github.com/Utiligize/configator-op/commit/b2a90f8d6a87ee0aee70e38204866b011b6232fe
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
 [d7ae1b7]: https://github.com/Utiligize/configator-op/commit/d7ae1b778b7798f0cca0fa4aa3611008aaef6b29
 [d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953
+[e0991b6]: https://github.com/Utiligize/configator-op/commit/e0991b65e5508de5c94be1c340876fbd12fea414
 [e5a453a]: https://github.com/Utiligize/configator-op/commit/e5a453ac59fe11fbea083b9168289ef111424dc4
+[e9b89e5]: https://github.com/Utiligize/configator-op/commit/e9b89e5803473b165fd735b77fc75f71405e4ef5
 [e9c5bfb]: https://github.com/Utiligize/configator-op/commit/e9c5bfb1d5182876354dd3974c97fd2e2bd10c3f
 [ed2cc18]: https://github.com/Utiligize/configator-op/commit/ed2cc18f8e318db3e4bcd732d15141724ba9a5b3
 [ed45385]: https://github.com/Utiligize/configator-op/commit/ed45385e514b42f2d0e86391cff416086e175ea4
