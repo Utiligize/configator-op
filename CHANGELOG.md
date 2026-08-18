@@ -41,17 +41,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `PostgresConfig.dsn_redacted()` returning a log-safe DSN string with the password masked ([85f0dca])
+- feat: add log-safe `dsn_redacted()` helper to PostgresConfig ([85f0dca])
 
 ### Changed
 
 - chore(ci): Update actions/checkout action to v7 ([d7ae1b7])
 - chore: update python dependencies ([e9c5bfb])
-- fix(security): default Postgres `PGSSLMODE` to `require` instead of `prefer` ([91d626f])
+- fix: default Postgres SSL mode to `require` instead of `prefer` ([91d626f])
 
 ### Fixed
 
-- Hydrating a schema field annotated with a parameterized generic (e.g. `list[str]`) no longer crashes with `TypeError: issubclass() arg 1 must be a class`; the annotation is now resolved to its origin before any `issubclass()` check ([ed2cc18])
+- fix: resolve parameterized generic field annotations before issubclass ([ed2cc18])
 
 ## [3000.4.1] - 2026-06-16
 
