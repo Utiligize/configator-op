@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `op://` references are now resolved in batches with `secrets.resolve_all()` instead of one `secrets.resolve()` call per field. A load costs `3 + <reference nesting depth>` 1Password requests regardless of how many fields the schema declares; measured against a real vault, resolving 14 distinct references (one of them chained) dropped from 30 reads to 2. Previously the cost grew with schema size and a crash-looping container could exhaust a service account's hourly read budget. See ADR-012
 - The number of 1Password requests spent on each `load_config` is logged at info level when the load completes
 - A schema field with no matching item field and no default now raises `RuntimeError: field '<name>' not found and no default value provided` instead of the PEP 479 `RuntimeError: coroutine raised StopIteration`
+- A chain of exactly 10 `op://` links now resolves, matching the documented depth limit; the previous implementation raised on the tenth hop and so only reached nine
 - Ruff linting and formatting now cover the whole repository instead of only `src/`, and the `PT` (flake8-pytest-style) rule set is enabled; test modules consequently use `import pytest` and the `pytest.` namespace rather than importing `fixture`, `mark` and `raises` directly
 - Static type checking is now done with [Pyrefly](https://pyrefly.org/) instead of mypy, and covers `tests/` in addition to `src/`
 - CI runs as three jobs — lint, test (Python 3.12/3.13/3.14) and scan — so linting fails fast instead of waiting behind the test matrix; the Sonar scan consumes the coverage report uploaded by the 3.12 test job and is skipped on draft pull requests
@@ -28,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - chore(deps): Update dependency twine to v7
 - chore: drop auto uv sync from .envrc on directory entry
 - chore: update python dependencies
+
+### Fixed
+
+- A secret reference that `resolve_all` omits from its response is now reported by name instead of being retried until the nested-reference limit, which spent ten requests and reported the misleading `the dwarves delved too greedily and too deep`
 
 ### Removed
 

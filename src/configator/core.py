@@ -211,10 +211,13 @@ async def _resolve_references(
     """
     resolved = {f.value: f.value for f in item.fields if f.value.startswith(_OP_SCHEME)}
     requests = 0
-    for _ in range(_MAX_REFERENCE_DEPTH):
+    while True:
         pending = sorted({v for v in resolved.values() if v.startswith(_OP_SCHEME)})
         if not pending:
             return resolved, requests
+        if requests == _MAX_REFERENCE_DEPTH:
+            log.error("too many nested op:// references when resolving item '%s'", item.title)
+            raise RuntimeError("the dwarves delved too greedily and too deep")
 
         try:
             response = await _resolve_all(op_client, pending)
@@ -223,10 +226,13 @@ async def _resolve_references(
         requests += 1
 
         secrets = _unwrap_resolved(response)
+        missing = [reference for reference in pending if reference not in secrets]
+        if missing:
+            log.error("1Password returned no result for %d secret reference(s)", len(missing))
+            raise RuntimeError(
+                f"1Password returned no result for secret reference(s): {', '.join(missing)}"
+            )
         resolved = {ref: secrets.get(value, value) for ref, value in resolved.items()}
-
-    log.error("too many nested op:// references when resolving item '%s'", item.title)
-    raise RuntimeError("the dwarves delved too greedily and too deep")
 
 
 def _unwrap_resolved(response: ResolveAllResponse) -> dict[str, str]:

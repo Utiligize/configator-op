@@ -468,9 +468,11 @@ figure by the restart count and exhausted a service account's hourly read budget
 Resolve references in batches instead of one at a time. After the config item is fetched,
 collect every field value beginning with `op://`, deduplicate them, and resolve the whole
 set with a single `secrets.resolve_all()` call. Chained references are followed by repeating
-the batch, one request per level of nesting, keeping the ADR-006 depth limit of 10.
-Hydration then reads from the resolved mapping and performs no I/O, so `_hydrate_model` and
-`_hydrate_field` are synchronous. The total request count for a load is logged at info level.
+the batch, one request per level of nesting, keeping the ADR-006 depth limit of 10. The
+limit is enforced as ten resolution rounds, so a chain of exactly ten links now resolves;
+the previous per-field implementation raised on the tenth hop and therefore only reached
+nine. Hydration then reads from the resolved mapping and performs no I/O, so `_hydrate_model`
+and `_hydrate_field` are synchronous. The total request count for a load is logged at info level.
 
 **Consequences:**
 
@@ -486,7 +488,9 @@ Hydration then reads from the resolved mapping and performs no I/O, so `_hydrate
   - Every `op://` field in the config item is resolved, including fields the schema does not
     declare. Batched into the same request this is effectively free, but the values are fetched.
   - `resolve_all` reports per-reference failures in its response rather than raising, so failures
-    are surfaced by inspecting the response instead of by exception.
+    are surfaced by inspecting the response instead of by exception. A reference the response
+    omits entirely is reported by name rather than retried, since retrying it could not make
+    progress and would otherwise be misreported as an over-deep reference chain.
   - A missing required field now raises `RuntimeError` directly; previously the `StopIteration`
     from the field lookup was converted to `RuntimeError` by PEP 479 because the hydrator was async.
 

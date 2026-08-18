@@ -25,6 +25,7 @@ import pytest
 from pydantic import BaseModel
 
 from configator.core import (
+    _MAX_REFERENCE_DEPTH,
     _field_matcher,
     _get_client,
     _get_item_overview,
@@ -367,8 +368,10 @@ def test_parse_bool_invalid_value():
 
 
 def _echo_resolve_all(references: list[str]) -> ResolveAllResponse:
-    """Resolve every reference to itself, as the pre-batching stub did."""
-    return _resolve_all_response({reference: reference for reference in references})
+    """Resolve every reference to a plain value, so resolution always terminates."""
+    return _resolve_all_response(
+        {reference: reference.rsplit("/", 1)[-1] for reference in references}
+    )
 
 
 # Tests for _resolve_references
@@ -496,6 +499,21 @@ async def test_resolve_references_request_error(mock_op_client):
 
 
 @pytest.mark.asyncio
+async def test_resolve_references_at_max_depth(mock_op_client):
+    """Test that a chain exactly at the documented depth of 10 links resolves."""
+    chain = [f"op://vault/item/field{n}" for n in range(_MAX_REFERENCE_DEPTH)]
+    mock_op_client.secrets.resolve_all.side_effect = [
+        _resolve_all_response({link: next_link})
+        for link, next_link in zip(chain, [*chain[1:], "final_value"], strict=True)
+    ]
+
+    resolved, requests = await _resolve_references(mock_op_client, _item_with_values(chain[0]))
+
+    assert resolved == {chain[0]: "final_value"}
+    assert requests == _MAX_REFERENCE_DEPTH
+
+
+@pytest.mark.asyncio
 async def test_resolve_references_too_deep(mock_op_client):
     """Test that an endless reference chain raises RuntimeError."""
     mock_op_client.secrets.resolve_all.return_value = _resolve_all_response(
@@ -504,6 +522,25 @@ async def test_resolve_references_too_deep(mock_op_client):
 
     with pytest.raises(RuntimeError, match="the dwarves delved too greedily and too deep"):
         await _resolve_references(mock_op_client, _item_with_values("op://vault/item/field"))
+
+    assert mock_op_client.secrets.resolve_all.await_count == _MAX_REFERENCE_DEPTH
+
+
+@pytest.mark.asyncio
+async def test_resolve_references_missing_from_response(mock_op_client):
+    """Test that a reference absent from the response is reported, not retried."""
+    mock_op_client.secrets.resolve_all.return_value = _resolve_all_response(
+        {"op://vault/item/present": "secret"}
+    )
+
+    match = "1Password returned no result for secret reference"
+    with pytest.raises(RuntimeError, match=match):
+        await _resolve_references(
+            mock_op_client,
+            _item_with_values("op://vault/item/present", "op://vault/item/absent"),
+        )
+
+    assert mock_op_client.secrets.resolve_all.await_count == 1
 
 
 # Tests for _hydrate_model
