@@ -278,6 +278,17 @@ def test_is_transient_other_error():
 
 
 @pytest.mark.asyncio
+async def test_get_client_retries_transient_error():
+    """Test that a transient authentication failure is retried."""
+    with patch("configator.core.OnePasswordClient.authenticate") as mock_auth:
+        client = AsyncMock()
+        mock_auth.side_effect = [Exception("connection reset"), client]
+
+        assert await _get_client("test_token") is client
+        assert mock_auth.call_count == 2
+
+
+@pytest.mark.asyncio
 async def test_get_client_rate_limit_is_not_retried():
     """Test that a rate-limited authentication costs exactly one request."""
     with patch("configator.core.OnePasswordClient.authenticate") as mock_auth:

@@ -535,10 +535,10 @@ would never fire; a deny-list anchored on the one typed error that matters is bo
 and effective. The cost is that a permanent failure such as a bad token is attempted three
 times instead of once.
 
-The budget is 3 attempts capped at 10 seconds in total, with waits from 0.2 s to 2 s. That
-fits inside a gunicorn worker timeout of 30 s and leaves room in the deploy tooling's 120 s
-readiness wait, so a partial 1Password outage reads as a slow start rather than a failed
-deploy.
+The budget is 3 attempts with waits from 0.2 s to 2 s, and no further attempt is scheduled
+more than 10 seconds after the first. That fits inside a gunicorn worker timeout of 30 s and
+leaves room in the deploy tooling's 120 s readiness wait, so a partial 1Password outage reads
+as a slow start rather than a failed deploy.
 
 **Consequences:**
 
@@ -554,6 +554,10 @@ deploy.
   - Adds a runtime dependency on stamina (and its tenacity dependency).
   - Terminal non-rate-limit failures (bad token, revoked access) cost three attempts.
   - Worst case a load takes about 10 seconds longer per failing call than it used to.
+  - The timeout bounds the scheduling of retries, not the duration of any single call. The
+    SDK exposes no request timeout, so a request that hangs rather than fails still hangs;
+    bounding that would require wrapping the whole load in an `asyncio.timeout`, which is a
+    separate decision about whether a load may abort an in-flight request.
   - The request count logged on a successful load counts logical requests, not retried
     attempts, so it under-reports when a retry occurred.
 
