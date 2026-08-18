@@ -205,7 +205,7 @@ wheels = [
 
 [[package]]
 name = "configator-op"
-version = "3000.5.0"
+version = "3000.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "onepassword-sdk" },
