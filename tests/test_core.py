@@ -3,7 +3,18 @@
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
-from onepassword.types import Item, ItemField, ItemOverview, ItemSection, VaultOverview
+from onepassword.types import (
+    Item,
+    ItemField,
+    ItemOverview,
+    ItemSection,
+    ResolveAllResponse,
+    ResolvedReference,
+    ResolveReferenceError,
+    ResolveReferenceErrorVaultNotFound,
+    Response,
+    VaultOverview,
+)
 
 try:
     from onepassword.types import VaultType
@@ -22,7 +33,7 @@ from configator.core import (
     _hydrate_model,
     _op_field_name_to_lower_snake_case,
     _parse_bool,
-    _resolve_op_link,
+    _resolve_references,
     load_config,
 )
 
@@ -355,59 +366,148 @@ def test_parse_bool_invalid_value():
         _parse_bool("invalid")
 
 
-# Tests for _resolve_op_link
-@pytest.mark.asyncio
-async def test_resolve_op_link_no_link(mock_op_client):
-    """Test resolving non-op:// link."""
-    result = await _resolve_op_link(mock_op_client, "plain_value")
-    assert result == "plain_value"
-    mock_op_client.secrets.resolve.assert_not_called()
+def _echo_resolve_all(references: list[str]) -> ResolveAllResponse:
+    """Resolve every reference to itself, as the pre-batching stub did."""
+    return _resolve_all_response({reference: reference for reference in references})
 
 
-@pytest.mark.asyncio
-async def test_resolve_op_link_single_link(mock_op_client):
-    """Test resolving single op:// link."""
-    mock_op_client.secrets.resolve.return_value = "resolved_value"
-    result = await _resolve_op_link(mock_op_client, "op://vault/item/field")
-    assert result == "resolved_value"
-    mock_op_client.secrets.resolve.assert_called_once_with("op://vault/item/field")
-
-
-@pytest.mark.asyncio
-async def test_resolve_op_link_nested_links(mock_op_client):
-    """Test resolving nested op:// links."""
-    mock_op_client.secrets.resolve.side_effect = [
-        "op://vault2/item2/field2",
-        "final_value",
-    ]
-    result = await _resolve_op_link(mock_op_client, "op://vault1/item1/field1")
-    assert result == "final_value"
-    assert mock_op_client.secrets.resolve.call_count == 2
-
-
-@pytest.mark.asyncio
-async def test_resolve_op_link_resolution_error(mock_op_client):
-    """Test resolving op:// link includes the reference in the error message."""
-    mock_op_client.secrets.resolve.side_effect = Exception(
-        "no vault matched the secret reference query"
+# Tests for _resolve_references
+def _item_with_values(*values: str) -> Item:
+    """Build an Item whose fields carry the given values."""
+    return Item(
+        id="item1",
+        title="Test",
+        vaultId="vault1",
+        category="Login",
+        fields=[
+            ItemField(
+                id=f"f{n}", title=f"field-{n}", fieldType="Text", value=value, sectionId=None
+            )
+            for n, value in enumerate(values)
+        ],
+        sections=[],
+        notes="",
+        tags=[],
+        websites=[],
+        version=1,
+        files=[],
+        createdAt="2024-01-01T00:00:00Z",
+        updatedAt="2024-01-01T00:00:00Z",
     )
+
+
+def _resolve_all_response(secrets: dict[str, str]) -> ResolveAllResponse:
+    """Build a ResolveAllResponse resolving each reference to the given secret."""
+    return ResolveAllResponse(
+        individualResponses={
+            reference: Response[ResolvedReference, ResolveReferenceError](
+                content=ResolvedReference(secret=secret, itemId="item1", vaultId="vault1")
+            )
+            for reference, secret in secrets.items()
+        }
+    )
+
+
+def _resolve_all_error(reference: str) -> ResolveAllResponse:
+    """Build a ResolveAllResponse where the given reference failed to resolve."""
+    return ResolveAllResponse(
+        individualResponses={
+            reference: Response[ResolvedReference, ResolveReferenceError](
+                error=ResolveReferenceErrorVaultNotFound()
+            )
+        }
+    )
+
+
+@pytest.mark.asyncio
+async def test_resolve_references_no_links(mock_op_client):
+    """Test that an item without op:// values costs no requests."""
+    resolved, requests = await _resolve_references(mock_op_client, _item_with_values("plain"))
+    assert resolved == {}
+    assert requests == 0
+    mock_op_client.secrets.resolve_all.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_resolve_references_single_request_for_many_links(mock_op_client):
+    """Test that every reference in the item is resolved in one batched request."""
+    references = [f"op://vault/item/field{n}" for n in range(50)]
+    mock_op_client.secrets.resolve_all.return_value = _resolve_all_response(
+        {reference: f"secret-{reference}" for reference in references}
+    )
+
+    resolved, requests = await _resolve_references(mock_op_client, _item_with_values(*references))
+
+    assert requests == 1
+    assert resolved == {reference: f"secret-{reference}" for reference in references}
+    mock_op_client.secrets.resolve_all.assert_awaited_once_with(sorted(references))
+
+
+@pytest.mark.asyncio
+async def test_resolve_references_deduplicates(mock_op_client):
+    """Test that a reference repeated across fields is resolved once."""
+    mock_op_client.secrets.resolve_all.return_value = _resolve_all_response(
+        {"op://vault/item/field": "secret"}
+    )
+
+    resolved, requests = await _resolve_references(
+        mock_op_client, _item_with_values("op://vault/item/field", "op://vault/item/field")
+    )
+
+    assert requests == 1
+    assert resolved == {"op://vault/item/field": "secret"}
+    mock_op_client.secrets.resolve_all.assert_awaited_once_with(["op://vault/item/field"])
+
+
+@pytest.mark.asyncio
+async def test_resolve_references_chained_links(mock_op_client):
+    """Test that a reference pointing at another reference is followed."""
+    mock_op_client.secrets.resolve_all.side_effect = [
+        _resolve_all_response({"op://vault1/item1/field1": "op://vault2/item2/field2"}),
+        _resolve_all_response({"op://vault2/item2/field2": "final_value"}),
+    ]
+
+    resolved, requests = await _resolve_references(
+        mock_op_client, _item_with_values("op://vault1/item1/field1")
+    )
+
+    assert resolved == {"op://vault1/item1/field1": "final_value"}
+    assert requests == 2
+
+
+@pytest.mark.asyncio
+async def test_resolve_references_resolution_error(mock_op_client):
+    """Test that a failed reference is reported with its own name."""
+    mock_op_client.secrets.resolve_all.return_value = _resolve_all_error("op://vault/item/field")
+
     with pytest.raises(
         RuntimeError, match="failed to resolve secret reference 'op://vault/item/field'"
     ):
-        await _resolve_op_link(mock_op_client, "op://vault/item/field")
+        await _resolve_references(mock_op_client, _item_with_values("op://vault/item/field"))
 
 
 @pytest.mark.asyncio
-async def test_resolve_op_link_too_deep(mock_op_client):
-    """Test resolving op:// link with too many levels raises RuntimeError."""
-    mock_op_client.secrets.resolve.return_value = "op://vault/item/field"
+async def test_resolve_references_request_error(mock_op_client):
+    """Test that a failing batch request is reported as a RuntimeError."""
+    mock_op_client.secrets.resolve_all.side_effect = Exception("Too many requests")
+
+    with pytest.raises(RuntimeError, match="failed to resolve 1 secret reference"):
+        await _resolve_references(mock_op_client, _item_with_values("op://vault/item/field"))
+
+
+@pytest.mark.asyncio
+async def test_resolve_references_too_deep(mock_op_client):
+    """Test that an endless reference chain raises RuntimeError."""
+    mock_op_client.secrets.resolve_all.return_value = _resolve_all_response(
+        {"op://vault/item/field": "op://vault/item/field"}
+    )
+
     with pytest.raises(RuntimeError, match="the dwarves delved too greedily and too deep"):
-        await _resolve_op_link(mock_op_client, "op://vault/item/field")
+        await _resolve_references(mock_op_client, _item_with_values("op://vault/item/field"))
 
 
 # Tests for _hydrate_model
-@pytest.mark.asyncio
-async def test_hydrate_model_parameterized_generic(mock_op_client):
+def test_hydrate_model_parameterized_generic():
     """Test hydrating model with a parameterized generic field (e.g. list[str])."""
     item = Item(
         id="item1",
@@ -432,13 +532,11 @@ async def test_hydrate_model_parameterized_generic(mock_op_client):
         createdAt="2024-01-01T00:00:00Z",
         updatedAt="2024-01-01T00:00:00Z",
     )
-    mock_op_client.secrets.resolve.side_effect = lambda x: x
-    result = await _hydrate_model(op_client=mock_op_client, schema=GenericConfig, item=item)
+    result = _hydrate_model(resolved={}, schema=GenericConfig, item=item)
     assert result.price_areas == ["DK1", "DK2"]
 
 
-@pytest.mark.asyncio
-async def test_hydrate_model_simple(mock_op_client):
+def test_hydrate_model_simple():
     """Test hydrating simple model."""
     item = Item(
         id="item1",
@@ -464,14 +562,12 @@ async def test_hydrate_model_simple(mock_op_client):
         createdAt="2024-01-01T00:00:00Z",
         updatedAt="2024-01-01T00:00:00Z",
     )
-    mock_op_client.secrets.resolve.side_effect = lambda x: x
-    result = await _hydrate_model(op_client=mock_op_client, schema=SimpleConfig, item=item)
+    result = _hydrate_model(resolved={}, schema=SimpleConfig, item=item)
     assert result.field_one == "test"
     assert result.field_two == 42
 
 
-@pytest.mark.asyncio
-async def test_hydrate_model_with_bool(mock_op_client):
+def test_hydrate_model_with_bool():
     """Test hydrating model with boolean field."""
     item = Item(
         id="item1",
@@ -491,16 +587,12 @@ async def test_hydrate_model_with_bool(mock_op_client):
         createdAt="2024-01-01T00:00:00Z",
         updatedAt="2024-01-01T00:00:00Z",
     )
-    mock_op_client.secrets.resolve.side_effect = lambda x: x
-    result = await _hydrate_model(
-        op_client=mock_op_client, schema=SectionConfig, item=item, section_id="sec1"
-    )
+    result = _hydrate_model(resolved={}, schema=SectionConfig, item=item, section_id="sec1")
     assert result.debug is True
     assert result.timeout == 30
 
 
-@pytest.mark.asyncio
-async def test_hydrate_model_with_default_value(mock_op_client):
+def test_hydrate_model_with_default_value():
     """Test hydrating model with default value when field missing."""
     item = Item(
         id="item1",
@@ -527,16 +619,14 @@ async def test_hydrate_model_with_default_value(mock_op_client):
         createdAt="2024-01-01T00:00:00Z",
         updatedAt="2024-01-01T00:00:00Z",
     )
-    mock_op_client.secrets.resolve.side_effect = lambda x: x
-    result = await _hydrate_model(op_client=mock_op_client, schema=ComplexConfig, item=item)
+    result = _hydrate_model(resolved={}, schema=ComplexConfig, item=item)
     assert result.simple_field == "value"
     assert result.section.debug is False
     assert result.section.timeout == 60
     assert result.optional_field == "default_value"
 
 
-@pytest.mark.asyncio
-async def test_hydrate_model_missing_required_field(mock_op_client):
+def test_hydrate_model_missing_required_field():
     """Test hydrating model with missing required field raises RuntimeError."""
     item = Item(
         id="item1",
@@ -561,14 +651,12 @@ async def test_hydrate_model_missing_required_field(mock_op_client):
         createdAt="2024-01-01T00:00:00Z",
         updatedAt="2024-01-01T00:00:00Z",
     )
-    mock_op_client.secrets.resolve.side_effect = lambda x: x
-    # StopIteration in async context is wrapped in RuntimeError (PEP 479)
-    with pytest.raises(RuntimeError, match="coroutine raised StopIteration"):
-        await _hydrate_model(op_client=mock_op_client, schema=SimpleConfig, item=item)
+    match = "field 'field_two' not found and no default value provided"
+    with pytest.raises(RuntimeError, match=match):
+        _hydrate_model(resolved={}, schema=SimpleConfig, item=item)
 
 
-@pytest.mark.asyncio
-async def test_hydrate_model_with_op_link(mock_op_client):
+def test_hydrate_model_with_op_link():
     """Test hydrating model with op:// reference."""
     item = Item(
         id="item1",
@@ -594,14 +682,16 @@ async def test_hydrate_model_with_op_link(mock_op_client):
         createdAt="2024-01-01T00:00:00Z",
         updatedAt="2024-01-01T00:00:00Z",
     )
-    mock_op_client.secrets.resolve.return_value = "resolved_value"
-    result = await _hydrate_model(op_client=mock_op_client, schema=SimpleConfig, item=item)
+    result = _hydrate_model(
+        resolved={"op://vault/item/field": "resolved_value"},
+        schema=SimpleConfig,
+        item=item,
+    )
     assert result.field_one == "resolved_value"
     assert result.field_two == 42
 
 
-@pytest.mark.asyncio
-async def test_hydrate_model_nested_sections(mock_op_client):
+def test_hydrate_model_nested_sections():
     """Test hydrating model with nested sections."""
     item = Item(
         id="item1",
@@ -624,8 +714,7 @@ async def test_hydrate_model_nested_sections(mock_op_client):
         createdAt="2024-01-01T00:00:00Z",
         updatedAt="2024-01-01T00:00:00Z",
     )
-    mock_op_client.secrets.resolve.side_effect = lambda x: x
-    result = await _hydrate_model(op_client=mock_op_client, schema=ComplexConfig, item=item)
+    result = _hydrate_model(resolved={}, schema=ComplexConfig, item=item)
     assert result.simple_field == "test"
     assert isinstance(result.section, SectionConfig)
     assert result.section.debug is True
@@ -665,7 +754,7 @@ async def test_load_config_success(mock_op_client, mock_vault, mock_item_overvie
         mock_op_client.vaults.list.return_value = [mock_vault]
         mock_op_client.items.list.return_value = [mock_item_overview]
         mock_op_client.items.get.return_value = item
-        mock_op_client.secrets.resolve.side_effect = lambda x: x
+        mock_op_client.secrets.resolve_all.side_effect = _echo_resolve_all
 
         result = await load_config(
             token="test_token", vault="TestVault", item="TestItem", schema=SimpleConfig
@@ -674,6 +763,70 @@ async def test_load_config_success(mock_op_client, mock_vault, mock_item_overvie
         assert isinstance(result, SimpleConfig)
         assert result.field_one == "test_value"
         assert result.field_two == 123
+
+
+@pytest.mark.asyncio
+async def test_load_config_request_count_is_bounded(
+    mock_op_client, mock_vault, mock_item_overview
+):
+    """Test that a schema of many referencing fields costs a bounded number of requests."""
+    references = [f"op://vault/item/secret{n}" for n in range(50)]
+    item = Item(
+        id="item456",
+        title="TestItem",
+        vaultId="vault123",
+        category="Login",
+        fields=[
+            ItemField(
+                id="f1",
+                title="field-one",
+                fieldType="Text",
+                value="op://vault/item/secret0",
+                sectionId=None,
+            ),
+            ItemField(
+                id="f2",
+                title="field-two",
+                fieldType="Text",
+                value="op://vault/item/secret1",
+                sectionId=None,
+            ),
+            *[
+                ItemField(
+                    id=f"x{n}",
+                    title=f"unused-{n}",
+                    fieldType="Text",
+                    value=reference,
+                    sectionId=None,
+                )
+                for n, reference in enumerate(references[2:], start=2)
+            ],
+        ],
+        sections=[],
+        notes="",
+        tags=[],
+        websites=[],
+        version=1,
+        files=[],
+        createdAt="2024-01-01T00:00:00Z",
+        updatedAt="2024-01-01T00:00:00Z",
+    )
+
+    with patch("configator.core._get_client", return_value=mock_op_client):
+        mock_op_client.vaults.list.return_value = [mock_vault]
+        mock_op_client.items.list.return_value = [mock_item_overview]
+        mock_op_client.items.get.return_value = item
+        mock_op_client.secrets.resolve_all.return_value = _resolve_all_response(
+            {"op://vault/item/secret0": "first"} | dict.fromkeys(references[1:], "42")
+        )
+
+        result = await load_config(
+            token="test_token", vault="TestVault", item="TestItem", schema=SimpleConfig
+        )
+
+    assert result.field_one == "first"
+    assert result.field_two == 42
+    assert mock_op_client.secrets.resolve_all.await_count == 1
 
 
 @pytest.mark.asyncio
@@ -754,7 +907,7 @@ async def test_load_config_complex_schema(
         mock_op_client.vaults.list.return_value = [mock_vault]
         mock_op_client.items.list.return_value = [mock_item_overview]
         mock_op_client.items.get.return_value = complex_item
-        mock_op_client.secrets.resolve.side_effect = lambda x: x
+        mock_op_client.secrets.resolve_all.side_effect = _echo_resolve_all
 
         result = await load_config(
             token="test_token", vault="TestVault", item="TestItem", schema=ComplexConfig
@@ -777,7 +930,7 @@ async def test_load_config_complex_schema_idempotent(
         mock_op_client.vaults.list.return_value = [mock_vault]
         mock_op_client.items.list.return_value = [mock_item_overview]
         mock_op_client.items.get.return_value = complex_item
-        mock_op_client.secrets.resolve.side_effect = lambda x: x
+        mock_op_client.secrets.resolve_all.side_effect = _echo_resolve_all
 
         first = await load_config(
             token="test_token", vault="TestVault", item="TestItem", schema=ComplexConfig
