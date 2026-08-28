@@ -9,8 +9,12 @@ set dotenv-load
   echo
 
 # Build wheels
-build: is-clean
+build: is-clean clean-dist
   uv build
+
+# Remove build artifacts
+clean-dist:
+  rm -rf {{justfile_directory()}}/dist
 
 # Check whether the repo is clean
 is-clean:
