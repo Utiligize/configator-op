@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- chore: clear dist before building ([c4ac436])
+
 ## [3000.7.0] - 2026-08-28
 
 ### Added
@@ -230,6 +234,7 @@ Initial release.
 [af8a42b]: https://github.com/Utiligize/configator-op/commit/af8a42bb59c2767724102d2a85d8f191ff53620d
 [b2a90f8]: https://github.com/Utiligize/configator-op/commit/b2a90f8d6a87ee0aee70e38204866b011b6232fe
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d
+[c4ac436]: https://github.com/Utiligize/configator-op/commit/c4ac43613af4b949e1870b50427385e7a966e236
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
 [d7ae1b7]: https://github.com/Utiligize/configator-op/commit/d7ae1b778b7798f0cca0fa4aa3611008aaef6b29
 [d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953
