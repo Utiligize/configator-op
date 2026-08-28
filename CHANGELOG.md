@@ -6,13 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3000.7.0] - 2026-08-28
+
 ### Added
 
 - feat: typed exception hierarchy ([1e703ba])
 
 ### Changed
 
-- chore: extend copyright headers to 2025-2026 ([554f4ef])
+- chore: extend copyright headers to 2025-2026 ([5e8f6fe])
 
 ## [3000.6.0] - 2026-08-18
 
@@ -166,7 +168,8 @@ Initial release.
 
 <!-- markdownlint-disable-file MD024 -->
 
-[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.6.0...HEAD
+[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.7.0...HEAD
+[3000.7.0]: https://github.com/Utiligize/configator-op/compare/v3000.6.0...v3000.7.0
 [3000.6.0]: https://github.com/Utiligize/configator-op/compare/v3000.5.0...v3000.6.0
 [3000.5.0]: https://github.com/Utiligize/configator-op/compare/v3000.4.1...v3000.5.0
 [3000.4.1]: https://github.com/Utiligize/configator-op/compare/v3000.4.0...v3000.4.1
@@ -198,11 +201,11 @@ Initial release.
 [4de6b3e]: https://github.com/Utiligize/configator-op/commit/4de6b3e5bcc06d921f3c263dd692c5ecdf95762c
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f
 [5216dfc]: https://github.com/Utiligize/configator-op/commit/5216dfc83b3b52cea84a62e7d62cfbe9c6e1b625
-[554f4ef]: https://github.com/Utiligize/configator-op/commit/554f4ef3f5162db40813b100f3230c4974bf0e8d
 [579567d]: https://github.com/Utiligize/configator-op/commit/579567d6bd872896f25d8f0b8f9e2773407bcb59
 [5bd3fb9]: https://github.com/Utiligize/configator-op/commit/5bd3fb9456d2bb37fc494cc6acb8d28349754709
 [5ddbe83]: https://github.com/Utiligize/configator-op/commit/5ddbe839ddbb42fe72c1d5acffa2751ced5f967c
 [5e63002]: https://github.com/Utiligize/configator-op/commit/5e6300203382896eed1b4b5a12c3fd51ce55453f
+[5e8f6fe]: https://github.com/Utiligize/configator-op/commit/5e8f6fe07fe6a57e9177dcbd44f0f527cae6ae49
 [6026bdf]: https://github.com/Utiligize/configator-op/commit/6026bdf39955a68efa803a9a28b8133ce458c68e
 [6269c0b]: https://github.com/Utiligize/configator-op/commit/6269c0bbedd9819b672c0df25698e1544b23196e
 [6841d83]: https://github.com/Utiligize/configator-op/commit/6841d83439f77b919c00ff385940e8104fb546d6
