@@ -14,7 +14,7 @@ build: is-clean clean-dist
 
 # Remove build artifacts
 clean-dist:
-  rm -rf {{justfile_directory()}}/dist
+  rm -rf {{quote(justfile_directory() / "dist")}}
 
 # Check whether the repo is clean
 is-clean:
