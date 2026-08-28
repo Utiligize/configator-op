@@ -7,7 +7,7 @@
 # License-Filename: LICENSE.md                                                                    #
 ###################################################################################################
 
-from collections.abc import Mapping
+from collections.abc import Awaitable, Mapping
 from functools import partial
 from importlib.metadata import version
 from json import JSONDecodeError, loads
@@ -16,10 +16,11 @@ from typing import Any, get_origin
 from onepassword.client import Client as OnePasswordClient
 from onepassword.errors import RateLimitExceededException
 from onepassword.types import Item, ItemField, ItemOverview, ResolveAllResponse, VaultOverview
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from pydantic.fields import PydanticUndefined
 from stamina import retry
 
+from .errors import ConfigInvalidError, ConfigUnavailableError
 from .log import get_logger
 
 log = get_logger()
@@ -65,17 +66,25 @@ async def load_config[T: BaseModel](*, token: str, vault: str, item: str, schema
     """Return an initialized schema instance."""
     log.debug("loading configuration into schema '%s'", schema.__name__)
 
-    client = await _get_client(token)
+    client = await _call_1password(_get_client(token), "failed to authenticate with 1Password")
 
-    vault_overview = await _get_vault_overview(client, vault)
+    vault_overview = await _call_1password(
+        _get_vault_overview(client, vault), f"failed to look up vault '{vault}'"
+    )
     if vault_overview is None:
-        raise RuntimeError(f"vault '{vault}' not found")
+        raise ConfigUnavailableError(f"vault '{vault}' not found")
 
-    item_overview = await _get_item_overview(client, vault_overview.id, item)
+    item_overview = await _call_1password(
+        _get_item_overview(client, vault_overview.id, item),
+        f"failed to look up item '{item}' in vault '{vault}'",
+    )
     if item_overview is None:
-        raise RuntimeError(f"item '{item}' not found in vault {vault}")
+        raise ConfigUnavailableError(f"item '{item}' not found in vault {vault}")
 
-    cfg_item = await _get_item(client, vault_overview.id, item_overview.id)
+    cfg_item = await _call_1password(
+        _get_item(client, vault_overview.id, item_overview.id),
+        f"failed to retrieve item '{item}' from vault '{vault}'",
+    )
 
     resolved, resolve_requests = await _resolve_references(client, cfg_item)
 
@@ -86,6 +95,20 @@ async def load_config[T: BaseModel](*, token: str, vault: str, item: str, schema
         _LOOKUP_REQUESTS + resolve_requests,
     )
     return config
+
+
+async def _call_1password[R](call: Awaitable[R], message: str) -> R:
+    """Await a 1Password call, reporting any failure as an outage.
+
+    The SDK collapses auth, network and TLS failures into a bare ``Exception``
+    (see ADR-013), so anything reaching here is a failure to reach 1Password
+    rather than a statement about the config it holds.
+    """
+    try:
+        return await call
+    except Exception as exc:
+        log.error("%s: %s", message, str(exc))
+        raise ConfigUnavailableError(message) from exc
 
 
 def _field_matcher(field: ItemField, *, title: str, section_id: str | None = None) -> bool:
@@ -174,7 +197,7 @@ def _hydrate_field(
     if wet_field is None:
         if default is PydanticUndefined:
             log.error("field '%s' not found and no default value provided", key)
-            raise RuntimeError(f"field '{key}' not found and no default value provided")
+            raise ConfigInvalidError(f"field '{key}' not found and no default value provided")
         log.debug("using default value for field '%s'", key)
         return default
 
@@ -187,7 +210,10 @@ def _hydrate_field(
         return cls(str_val)  # type: ignore[call-arg]
     except JSONDecodeError as jde:
         log.error("failed to parse field '%s' as JSON: %s", key, str(jde))
-        raise
+        raise ConfigInvalidError(f"failed to parse field '{key}' as JSON") from jde
+    except (TypeError, ValueError) as exc:
+        log.error("failed to parse field '%s' as %s: %s", key, origin.__name__, str(exc))
+        raise ConfigInvalidError(f"failed to parse field '{key}' as {origin.__name__}") from exc
 
 
 def _hydrate_model[T: BaseModel](
@@ -217,7 +243,11 @@ def _hydrate_model[T: BaseModel](
             section_id=section_id,
         )
 
-    return schema(**wet_model)
+    try:
+        return schema(**wet_model)
+    except ValidationError as ve:
+        log.error("model '%s' failed validation: %s", schema.__name__, str(ve))
+        raise ConfigInvalidError(f"config does not fit schema '{schema.__name__}'") from ve
 
 
 def _op_field_name_to_lower_snake_case(name: str) -> str:
@@ -261,19 +291,19 @@ async def _resolve_references(
             return resolved, requests
         if requests == _MAX_REFERENCE_DEPTH:
             log.error("too many nested op:// references when resolving item '%s'", item.title)
-            raise RuntimeError("the dwarves delved too greedily and too deep")
+            raise ConfigInvalidError("the dwarves delved too greedily and too deep")
 
-        try:
-            response = await _resolve_all(op_client, pending)
-        except Exception as exc:
-            raise RuntimeError(f"failed to resolve {len(pending)} secret reference(s)") from exc
+        response = await _call_1password(
+            _resolve_all(op_client, pending),
+            f"failed to resolve {len(pending)} secret reference(s)",
+        )
         requests += 1
 
         secrets = _unwrap_resolved(response)
         missing = [reference for reference in pending if reference not in secrets]
         if missing:
             log.error("1Password returned no result for %d secret reference(s)", len(missing))
-            raise RuntimeError(
+            raise ConfigUnavailableError(
                 f"1Password returned no result for secret reference(s): {', '.join(missing)}"
             )
         resolved = {ref: secrets.get(value, value) for ref, value in resolved.items()}
@@ -284,7 +314,7 @@ def _unwrap_resolved(response: ResolveAllResponse) -> dict[str, str]:
     secrets: dict[str, str] = {}
     for reference, individual in response.individual_responses.items():
         if individual.content is None:
-            raise RuntimeError(
+            raise ConfigUnavailableError(
                 f"failed to resolve secret reference '{reference}': {individual.error}"
             )
         secrets[reference] = individual.content.secret

@@ -16,6 +16,7 @@
 - [ADR-011: Support developer mode with .env file priority](#adr-011-support-developer-mode-with-env-file-priority)
 - [ADR-012: Batch op:// reference resolution](#adr-012-batch-op-reference-resolution)
 - [ADR-013: Retry 1Password calls, but never a rate limit](#adr-013-retry-1password-calls-but-never-a-rate-limit)
+- [ADR-014: Split failures into unavailable and invalid](#adr-014-split-failures-into-unavailable-and-invalid)
 
 ## ADR-001: Use Structlog for logging
 
@@ -570,3 +571,76 @@ as a slow start rather than a failed deploy.
   - No change to the `load_config` signature or to schema definitions.
   - Tests that exercise failure paths should use `stamina.set_testing()` so retries do not
     add backoff waits to the suite.
+
+## ADR-014: Split failures into unavailable and invalid
+
+**Date:** 2026-08-28
+
+**Context:**
+
+`load_config` raised a bare `RuntimeError` for every failure, so a caller could not tell an
+outage apart from a misconfiguration without matching on the exception message. That
+distinction is not academic: a service that keeps a last-good config snapshot wants to boot
+from it when 1Password is unreachable, but must fail loudly when someone has edited the vault
+item wrong — serving stale config over an unfixed error is worse than not starting.
+
+The assetlife-api fallback (UT-9201) shipped an interim classifier that matched on Configator's
+message strings (`vault '...' not found`, `the dwarves delved too greedily and too deep`, and
+three others). That is fragile — rewording a log message silently flips a production start from
+"fall back" to "crash", or the other way — and every other consumer wanting the same behaviour
+has to copy the same string table.
+
+**Decision:**
+
+Introduce a three-type hierarchy in `configator.errors`, exported from the package root:
+
+- `ConfigatorError(Exception)` — base, so one `except` catches everything Configator raises.
+- `ConfigUnavailableError` — 1Password could not be reached or would not answer: auth failure,
+  network or TLS error, `RateLimitExceededException`, an empty vault or item listing, and
+  reference resolution that fails for transport reasons.
+- `ConfigInvalidError` — the item was read but does not fit the schema: a field with no value
+  and no default, a value that will not construct its annotated type, a `JSONDecodeError`,
+  Pydantic's `ValidationError`, and the `_MAX_REFERENCE_DEPTH` guard.
+
+The originating exception is always chained with `raise ... from`, so the message and traceback
+survive. A single helper, `_call_1password`, wraps each SDK await in `load_config` and
+`_resolve_references`; since the SDK collapses auth, network and TLS failures into a bare
+`Exception` (see [ADR-013](#adr-013-retry-1password-calls-but-never-a-rate-limit)), anything
+escaping a retried call is by construction a failure to reach 1Password rather than a statement
+about the config it holds.
+
+An empty vault or item listing is classified as unavailable rather than invalid because a
+de-permissioned or rotated service-account token is indistinguishable from a vault that is not
+there, and the safe reading of that ambiguity is the one that does not crash a healthy service.
+
+The developer-mode production guard in `models.py` keeps raising a plain `RuntimeError`: it is a
+refusal to start, not a report about the config item, and folding it into `ConfigInvalidError`
+would invite a caller to catch and handle it.
+
+**Consequences:**
+
+- Benefits
+  - Consumers branch on a type instead of a message; rewording a log line can no longer change
+    production start-up behaviour.
+  - The assetlife-api string table can be deleted in favour of `except ConfigUnavailableError`.
+  - Pydantic's `ValidationError` is wrapped, so a caller needs one `except` clause, not two.
+  - Chaining preserves the underlying diagnostic for logs and error reporting.
+
+- Costs / Trade-offs
+  - `ConfigatorError` derives from `Exception`, not `RuntimeError`, so a caller catching
+    `RuntimeError` specifically stops catching Configator failures. This is a breaking change
+    for such callers and warrants a minor version bump; code catching broad `Exception` is
+    unaffected.
+  - The unavailable/invalid split is a judgement call at the boundary. A reference pointing at a
+    vault that does not exist is a config error in spirit but reported as unavailable, because
+    the SDK cannot distinguish it from a permissions problem.
+  - Two extra public names on an API surface [ADR-009](#adr-009-provide-minimal-public-api-surface)
+    deliberately keeps small.
+
+- Operational considerations
+  - A consumer booting from a snapshot on `ConfigUnavailableError` should log loudly and alert;
+    a silent fallback that persists is how stale config reaches production unnoticed.
+
+- Developer impact
+  - No change to the `load_config` signature or to schema definitions.
+  - Tests asserting on failure paths assert on the exception type rather than the message.

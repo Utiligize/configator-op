@@ -142,6 +142,34 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
 - While `default` values are supported, `default_factory` is not.
 - Basic Python types `bytes` and `bytearray` may work but are not officially supported.
 
+## Error Handling
+
+Everything `load_config` raises derives from `ConfigatorError`, so one `except` clause catches the lot. Below it sit two types that answer the question a caller has to make a decision on — *is the config wrong, or is 1Password simply not answering?*
+
+| Exception | Meaning | What a caller should do |
+| --- | --- | --- |
+| `ConfigUnavailableError` | 1Password could not be reached or would not answer: authentication failure, network or TLS error, rate limiting, an empty vault or item listing, or a reference that could not be resolved. | The config that is there may well be fine. A service that keeps a last-good config snapshot may boot from it rather than fail. |
+| `ConfigInvalidError` | The item was read, but does not fit the schema: a field with no value and no default, a value that will not parse as its annotated type, malformed JSON in a collection field, a Pydantic validation failure, or a reference chain deeper than 10 links. | Fail loudly. Retrying and falling back to an older snapshot both serve stale config over a real, unfixed error; someone has to correct the 1Password item or the schema. |
+
+An empty vault or item listing counts as *unavailable* rather than *invalid*, because a de-permissioned or rotated service-account token looks exactly like a vault that is not there.
+
+The underlying exception is always chained, so the original message and traceback survive:
+
+```python
+from configator import ConfigInvalidError, ConfigUnavailableError, load_config
+
+try:
+    cfg = await load_config(schema=Config, token=token, vault=vault, item=item)
+except ConfigUnavailableError as exc:
+    log.warning("1Password unavailable, booting from snapshot: %s", exc.__cause__)
+    cfg = load_snapshot()
+except ConfigInvalidError:
+    log.exception("config item does not fit the schema")
+    raise
+```
+
+The developer-mode production guard described above is deliberately not part of this hierarchy: it still raises a plain `RuntimeError`, because it is a refusal to start rather than a report about the config item.
+
 ## Development
 
 ### Setup
