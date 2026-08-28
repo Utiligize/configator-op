@@ -144,7 +144,7 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
 
 ## Error Handling
 
-Everything `load_config` raises derives from `ConfigatorError`, so one `except` clause catches the lot. Below it sit two types that answer the question a caller has to make a decision on — *is the config wrong, or is 1Password simply not answering?*
+Every failure `load_config` reports about 1Password or the config item derives from `ConfigatorError`, so one `except` clause catches them all — the developer-mode production guard being the one deliberate exception, described at the end of this section. Below the base sit two types that answer the question a caller has to make a decision on — *is the config wrong, or is 1Password simply not answering?*
 
 | Exception | Meaning | What a caller should do |
 | --- | --- | --- |
@@ -153,7 +153,7 @@ Everything `load_config` raises derives from `ConfigatorError`, so one `except` 
 
 An empty vault or item listing counts as *unavailable* rather than *invalid*, because a de-permissioned or rotated service-account token looks exactly like a vault that is not there.
 
-The underlying exception is always chained, so the original message and traceback survive:
+Where a failure originates in an underlying exception — an SDK error, a parse failure, a Pydantic validation error — it is chained as `__cause__`, so the original message and traceback survive. Failures Configator detects itself have no `__cause__`: a vault or item absent from a listing, a required field with no value, a reference the response omits, and the depth guard all raise on their own. Treat `__cause__` as optional:
 
 ```python
 from configator import ConfigInvalidError, ConfigUnavailableError, load_config
@@ -161,7 +161,7 @@ from configator import ConfigInvalidError, ConfigUnavailableError, load_config
 try:
     cfg = await load_config(schema=Config, token=token, vault=vault, item=item)
 except ConfigUnavailableError as exc:
-    log.warning("1Password unavailable, booting from snapshot: %s", exc.__cause__)
+    log.warning("1Password unavailable, booting from snapshot: %s", exc.__cause__ or exc)
     cfg = load_snapshot()
 except ConfigInvalidError:
     log.exception("config item does not fit the schema")

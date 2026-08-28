@@ -594,7 +594,8 @@ has to copy the same string table.
 
 Introduce a three-type hierarchy in `configator.errors`, exported from the package root:
 
-- `ConfigatorError(Exception)` — base, so one `except` catches everything Configator raises.
+- `ConfigatorError(Exception)` — base, so one `except` catches every typed configuration-loading
+  failure. The developer-mode production guard is deliberately not one of them; see below.
 - `ConfigUnavailableError` — 1Password could not be reached or would not answer: auth failure,
   network or TLS error, `RateLimitExceededException`, an empty vault or item listing, and
   reference resolution that fails for transport reasons.
@@ -602,8 +603,11 @@ Introduce a three-type hierarchy in `configator.errors`, exported from the packa
   and no default, a value that will not construct its annotated type, a `JSONDecodeError`,
   Pydantic's `ValidationError`, and the `_MAX_REFERENCE_DEPTH` guard.
 
-The originating exception is always chained with `raise ... from`, so the message and traceback
-survive. A single helper, `_call_1password`, wraps each SDK await in `load_config` and
+Where a failure originates in an underlying exception it is chained with `raise ... from`, so the
+message and traceback survive. Failures Configator detects itself — a vault or item absent from a
+listing, a required field with no value, a reference the response omits, the depth guard — have no
+`__cause__`, so a consumer reading it must treat it as optional. A single helper,
+`_call_1password`, wraps each SDK await in `load_config` and
 `_resolve_references`; since the SDK collapses auth, network and TLS failures into a bare
 `Exception` (see [ADR-013](#adr-013-retry-1password-calls-but-never-a-rate-limit)), anything
 escaping a retried call is by construction a failure to reach 1Password rather than a statement

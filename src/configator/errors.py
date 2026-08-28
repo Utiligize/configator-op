@@ -9,7 +9,12 @@
 
 
 class ConfigatorError(Exception):
-    """Base class for every error Configator raises."""
+    """Base class for the typed failures raised while loading configuration.
+
+    The developer-mode production guard in ``models.py`` stays outside this
+    hierarchy and still raises a plain ``RuntimeError``: it is a refusal to
+    start, not a report about the config item.
+    """
 
 
 class ConfigInvalidError(ConfigatorError):
