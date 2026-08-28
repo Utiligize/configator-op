@@ -10,10 +10,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - feat: typed exception hierarchy ([1be6eb3])
 
-### Changed
-
-- **Breaking:** `RuntimeError` no longer catches configuration-loading failures — catch `ConfigatorError`, or `ConfigUnavailableError` / `ConfigInvalidError` to tell an outage from a bad config ([1be6eb3])
-
 ## [3000.6.0] - 2026-08-18
 
 ### Added
