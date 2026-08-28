@@ -1,5 +1,6 @@
 """Unit tests for Configator core functionality."""
 
+from json import JSONDecodeError
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
@@ -24,7 +25,7 @@ except ImportError:
     VaultType = None
 import pytest
 import stamina
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 
 from configator.core import (
     _MAX_REFERENCE_DEPTH,
@@ -42,6 +43,7 @@ from configator.core import (
     _resolve_references,
     load_config,
 )
+from configator.errors import ConfigatorError, ConfigInvalidError, ConfigUnavailableError
 
 # Stated independently of the production constant so that lowering the retry budget
 # fails the retry tests instead of silently changing what they assert.
@@ -82,6 +84,18 @@ class ComplexConfig(BaseModel):
     simple_field: str
     section: SectionConfig
     optional_field: str = "default_value"
+
+
+class JsonConfig(BaseModel):
+    """Schema with a field parsed from JSON."""
+
+    payload: dict
+
+
+class BoundedConfig(BaseModel):
+    """Schema whose validation rejects an out-of-range value."""
+
+    ratio: float = Field(le=1.0)
 
 
 # Fixtures
@@ -495,6 +509,28 @@ def _echo_resolve_all(references: list[str]) -> ResolveAllResponse:
     )
 
 
+def _item_with_fields(**fields: str) -> Item:
+    """Build an Item whose sectionless fields carry the given titles and values."""
+    return Item(
+        id="item1",
+        title="Test",
+        vaultId="vault1",
+        category="Login",
+        fields=[
+            ItemField(id=f"f{n}", title=title, fieldType="Text", value=value, sectionId=None)
+            for n, (title, value) in enumerate(fields.items())
+        ],
+        sections=[],
+        notes="",
+        tags=[],
+        websites=[],
+        version=1,
+        files=[],
+        createdAt="2024-01-01T00:00:00Z",
+        updatedAt="2024-01-01T00:00:00Z",
+    )
+
+
 # Tests for _resolve_references
 def _item_with_values(*values: str) -> Item:
     """Build an Item whose fields carry the given values."""
@@ -606,18 +642,19 @@ async def test_resolve_references_resolution_error(mock_op_client):
     item = _item_with_values("op://vault/item/field")
 
     with pytest.raises(
-        RuntimeError, match="failed to resolve secret reference 'op://vault/item/field'"
+        ConfigUnavailableError,
+        match="failed to resolve secret reference 'op://vault/item/field'",
     ):
         await _resolve_references(mock_op_client, item)
 
 
 @pytest.mark.asyncio
 async def test_resolve_references_request_error(mock_op_client):
-    """Test that a batch request failing every attempt is reported as a RuntimeError."""
+    """Test that a batch request failing every attempt is reported as an outage."""
     mock_op_client.secrets.resolve_all.side_effect = Exception("connection reset")
     item = _item_with_values("op://vault/item/field")
 
-    with pytest.raises(RuntimeError, match="failed to resolve 1 secret reference"):
+    with pytest.raises(ConfigUnavailableError, match="failed to resolve 1 secret reference"):
         await _resolve_references(mock_op_client, item)
 
     assert mock_op_client.secrets.resolve_all.await_count == EXPECTED_RETRY_ATTEMPTS
@@ -648,7 +685,7 @@ async def test_resolve_references_rate_limit_is_not_retried(mock_op_client):
     )
     item = _item_with_values("op://vault/item/field")
 
-    with pytest.raises(RuntimeError, match="failed to resolve 1 secret reference"):
+    with pytest.raises(ConfigUnavailableError, match="failed to resolve 1 secret reference"):
         await _resolve_references(mock_op_client, item)
 
     assert mock_op_client.secrets.resolve_all.await_count == 1
@@ -671,13 +708,13 @@ async def test_resolve_references_at_max_depth(mock_op_client):
 
 @pytest.mark.asyncio
 async def test_resolve_references_too_deep(mock_op_client):
-    """Test that an endless reference chain raises RuntimeError."""
+    """Test that an endless reference chain raises ConfigInvalidError."""
     mock_op_client.secrets.resolve_all.return_value = _resolve_all_response(
         {"op://vault/item/field": "op://vault/item/field"}
     )
     item = _item_with_values("op://vault/item/field")
 
-    with pytest.raises(RuntimeError, match="the dwarves delved too greedily and too deep"):
+    with pytest.raises(ConfigInvalidError, match="the dwarves delved too greedily and too deep"):
         await _resolve_references(mock_op_client, item)
 
     assert mock_op_client.secrets.resolve_all.await_count == _MAX_REFERENCE_DEPTH
@@ -692,7 +729,7 @@ async def test_resolve_references_missing_from_response(mock_op_client):
     item = _item_with_values("op://vault/item/present", "op://vault/item/absent")
 
     match = "1Password returned no result for secret reference"
-    with pytest.raises(RuntimeError, match=match):
+    with pytest.raises(ConfigUnavailableError, match=match):
         await _resolve_references(mock_op_client, item)
 
     assert mock_op_client.secrets.resolve_all.await_count == 1
@@ -819,7 +856,7 @@ def test_hydrate_model_with_default_value():
 
 
 def test_hydrate_model_missing_required_field():
-    """Test hydrating model with missing required field raises RuntimeError."""
+    """Test hydrating model with missing required field raises ConfigInvalidError."""
     item = Item(
         id="item1",
         title="Test",
@@ -844,7 +881,7 @@ def test_hydrate_model_missing_required_field():
         updatedAt="2024-01-01T00:00:00Z",
     )
     match = "field 'field_two' not found and no default value provided"
-    with pytest.raises(RuntimeError, match=match):
+    with pytest.raises(ConfigInvalidError, match=match):
         _hydrate_model(resolved={}, schema=SimpleConfig, item=item)
 
 
@@ -1027,7 +1064,7 @@ async def test_load_config_vault_not_found(mock_op_client):
     with patch("configator.core._get_client", return_value=mock_op_client):
         mock_op_client.vaults.list.return_value = []
 
-        with pytest.raises(RuntimeError, match="vault 'NonExistentVault' not found"):
+        with pytest.raises(ConfigUnavailableError, match="vault 'NonExistentVault' not found"):
             await load_config(
                 token="test_token",
                 vault="NonExistentVault",
@@ -1044,13 +1081,126 @@ async def test_load_config_item_not_found(mock_op_client, mock_vault):
         mock_op_client.items.list.return_value = []
 
         match = "item 'NonExistentItem' not found in vault TestVault"
-        with pytest.raises(RuntimeError, match=match):
+        with pytest.raises(ConfigUnavailableError, match=match):
             await load_config(
                 token="test_token",
                 vault="TestVault",
                 item="NonExistentItem",
                 schema=SimpleConfig,
             )
+
+
+# Tests for the exception hierarchy
+def test_failure_classes_share_one_base():
+    """Test that a single except clause catches everything Configator raises."""
+    assert issubclass(ConfigUnavailableError, ConfigatorError)
+    assert issubclass(ConfigInvalidError, ConfigatorError)
+
+
+def test_failure_classes_are_distinct():
+    """Test that an outage cannot be caught as a misconfiguration, or the reverse."""
+    assert not issubclass(ConfigUnavailableError, ConfigInvalidError)
+    assert not issubclass(ConfigInvalidError, ConfigUnavailableError)
+
+
+@pytest.mark.asyncio
+async def test_load_config_authentication_failure_is_unavailable():
+    """Test that a token 1Password will not accept reads as an outage."""
+    with patch("configator.core.OnePasswordClient.authenticate") as mock_auth:
+        mock_auth.side_effect = Exception("invalid session key")
+
+        with pytest.raises(ConfigUnavailableError, match="failed to authenticate") as excinfo:
+            await load_config(
+                token="bad_token", vault="TestVault", item="TestItem", schema=SimpleConfig
+            )
+
+    assert "invalid session key" in str(excinfo.value.__cause__)
+
+
+@pytest.mark.asyncio
+async def test_load_config_rate_limit_is_unavailable(mock_op_client):
+    """Test that an exhausted read budget reads as an outage, not a bad config."""
+    with patch("configator.core._get_client", return_value=mock_op_client):
+        mock_op_client.vaults.list.side_effect = RateLimitExceededException("Too many requests")
+
+        with pytest.raises(ConfigUnavailableError) as excinfo:
+            await load_config(
+                token="test_token", vault="TestVault", item="TestItem", schema=SimpleConfig
+            )
+
+    assert isinstance(excinfo.value.__cause__, RateLimitExceededException)
+
+
+@pytest.mark.asyncio
+async def test_load_config_item_retrieval_failure_is_unavailable(
+    mock_op_client, mock_vault, mock_item_overview
+):
+    """Test that a failing items.get reads as an outage."""
+    with patch("configator.core._get_client", return_value=mock_op_client):
+        mock_op_client.vaults.list.return_value = [mock_vault]
+        mock_op_client.items.list.return_value = [mock_item_overview]
+        mock_op_client.items.get.side_effect = Exception("connection reset")
+
+        with pytest.raises(ConfigUnavailableError, match="failed to retrieve item") as excinfo:
+            await load_config(
+                token="test_token", vault="TestVault", item="TestItem", schema=SimpleConfig
+            )
+
+    assert "connection reset" in str(excinfo.value.__cause__)
+
+
+@pytest.mark.asyncio
+async def test_load_config_schema_failure_is_invalid(
+    mock_op_client, mock_vault, mock_item_overview
+):
+    """Test that a bad item surfaces through load_config as a misconfiguration."""
+    with patch("configator.core._get_client", return_value=mock_op_client):
+        mock_op_client.vaults.list.return_value = [mock_vault]
+        mock_op_client.items.list.return_value = [mock_item_overview]
+        mock_op_client.items.get.return_value = _item_with_fields(**{"field-one": "test"})
+
+        with pytest.raises(ConfigInvalidError):
+            await load_config(
+                token="test_token", vault="TestVault", item="TestItem", schema=SimpleConfig
+            )
+
+
+def test_hydrate_model_unparseable_json_is_invalid():
+    """Test that a collection field holding malformed JSON reads as a misconfiguration."""
+    item = _item_with_fields(payload="{not json")
+
+    with pytest.raises(ConfigInvalidError, match="failed to parse field 'payload' as JSON") as ei:
+        _hydrate_model(resolved={}, schema=JsonConfig, item=item)
+
+    assert isinstance(ei.value.__cause__, JSONDecodeError)
+
+
+def test_hydrate_model_unparseable_bool_is_invalid():
+    """Test that a bool field holding an unrecognised string reads as a misconfiguration."""
+    item = _item_with_fields(debug="maybe", timeout="30")
+
+    with pytest.raises(ConfigInvalidError, match="failed to parse field 'debug' as bool") as ei:
+        _hydrate_model(resolved={}, schema=SectionConfig, item=item)
+
+    assert isinstance(ei.value.__cause__, ValueError)
+
+
+def test_hydrate_model_unparseable_int_is_invalid():
+    """Test that a value that will not construct its annotated type reads as a misconfiguration."""
+    item = _item_with_fields(**{"field-one": "test", "field-two": "not_a_number"})
+
+    with pytest.raises(ConfigInvalidError, match="failed to parse field 'field_two' as int"):
+        _hydrate_model(resolved={}, schema=SimpleConfig, item=item)
+
+
+def test_hydrate_model_validation_failure_is_invalid():
+    """Test that a value failing Pydantic validation reads as a misconfiguration."""
+    item = _item_with_fields(ratio="2.0")
+
+    with pytest.raises(ConfigInvalidError, match="does not fit schema 'BoundedConfig'") as ei:
+        _hydrate_model(resolved={}, schema=BoundedConfig, item=item)
+
+    assert isinstance(ei.value.__cause__, ValidationError)
 
 
 @pytest.fixture
