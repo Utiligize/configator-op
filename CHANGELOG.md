@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - chore: clear dist before building ([c4ac436])
+- chore(ci): remove DefectDojo upload step ([08363b0])
 
 ## [3000.7.0] - 2026-08-28
 
@@ -190,6 +191,7 @@ Initial release.
 [01b9485]: https://github.com/Utiligize/configator-op/commit/01b9485654832e82861cc8c7a390cc190f38daf4
 [03c114f]: https://github.com/Utiligize/configator-op/commit/03c114f08b5d0249bf2dfa4ad068871c43e89afb
 [04b8024]: https://github.com/Utiligize/configator-op/commit/04b80240e580628ac7a7b6bdb72035cadf6c3d83
+[08363b0]: https://github.com/Utiligize/configator-op/commit/08363b0bae9757ca4328616e7d419d432262114a
 [0ddc16a]: https://github.com/Utiligize/configator-op/commit/0ddc16ac3e8e0637137bf93146630198215d6546
 [0efeae6]: https://github.com/Utiligize/configator-op/commit/0efeae6f81e3dbecc5fcaea0afb9e564e6017331
 [0f06f5d]: https://github.com/Utiligize/configator-op/commit/0f06f5dd44d54f23a0b76c9ae5d0412913de348b
