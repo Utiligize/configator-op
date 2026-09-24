@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- chore: add just release recipe ([1926eb3])
+
 ## [3000.7.1] - 2026-09-25
 
 ### Changed
@@ -208,6 +212,7 @@ Initial release.
 [15b1a43]: https://github.com/Utiligize/configator-op/commit/15b1a433c56a790715da5746d4beb50a7a1ca25d
 [168fe4f]: https://github.com/Utiligize/configator-op/commit/168fe4f088df17c34782a14a07d9b8ef78b16f2d
 [18f5bb9]: https://github.com/Utiligize/configator-op/commit/18f5bb9d1741cc91ffe88a56f9c0b4ea8e212972
+[1926eb3]: https://github.com/Utiligize/configator-op/commit/1926eb332db755c4b9f18160b9f53030a9bd2b5b
 [1e703ba]: https://github.com/Utiligize/configator-op/commit/1e703ba6cf51da6eebe3f536e2e84ae903fb96c8
 [21d2a5f]: https://github.com/Utiligize/configator-op/commit/21d2a5f7ce3c4f68bc8d702eca0cf34fa2d77d21
 [2aa9d2e]: https://github.com/Utiligize/configator-op/commit/2aa9d2e884ba7e99ecdd6cf73ef10f2721340cb9
