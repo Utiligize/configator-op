@@ -316,11 +316,12 @@ async def test_get_client_retries_transient_error():
 @pytest.mark.asyncio
 async def test_get_client_rate_limit_is_not_retried():
     """Test that a rate-limited authentication costs exactly one request."""
+    token = SecretStr("test_token")
     with patch("configator.core.OnePasswordClient.authenticate") as mock_auth:
         mock_auth.side_effect = RateLimitExceededException("Too many requests")
 
         with pytest.raises(RateLimitExceededException):
-            await _get_client(SecretStr("test_token"))
+            await _get_client(token)
 
         assert mock_auth.call_count == 1
 
