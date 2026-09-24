@@ -571,6 +571,9 @@ as a slow start rather than a failed deploy.
   - No change to the `load_config` signature or to schema definitions.
   - Tests that exercise failure paths should use `stamina.set_testing()` so retries do not
     add backoff waits to the suite.
+  - stamina logs the `repr` of every argument to a retried function when it schedules a
+    retry, so a secret passed to one must be wrapped in `SecretStr`, as `_get_client` does
+    with the service-account token.
 
 ## ADR-014: Split failures into unavailable and invalid
 

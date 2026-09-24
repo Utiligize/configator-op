@@ -1,6 +1,7 @@
 """Unit tests for Configator core functionality."""
 
 from json import JSONDecodeError
+from logging import DEBUG
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
@@ -25,7 +26,8 @@ except ImportError:
     VaultType = None
 import pytest
 import stamina
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, SecretStr, ValidationError
+from structlog.testing import capture_logs
 
 from configator.core import (
     _MAX_REFERENCE_DEPTH,
@@ -225,7 +227,7 @@ async def test_get_client():
     """Test client initialization."""
     with patch("configator.core.OnePasswordClient.authenticate") as mock_auth:
         mock_auth.return_value = AsyncMock()
-        client = await _get_client("test_token")
+        client = await _get_client(SecretStr("test_token"))
         assert client is not None
         mock_auth.assert_called_once()
         call_args = mock_auth.call_args
@@ -307,7 +309,7 @@ async def test_get_client_retries_transient_error():
         client = AsyncMock()
         mock_auth.side_effect = [Exception("connection reset"), client]
 
-        assert await _get_client("test_token") is client
+        assert await _get_client(SecretStr("test_token")) is client
         assert mock_auth.call_count == 2
 
 
@@ -318,7 +320,7 @@ async def test_get_client_rate_limit_is_not_retried():
         mock_auth.side_effect = RateLimitExceededException("Too many requests")
 
         with pytest.raises(RateLimitExceededException):
-            await _get_client("test_token")
+            await _get_client(SecretStr("test_token"))
 
         assert mock_auth.call_count == 1
 
@@ -1088,6 +1090,28 @@ async def test_load_config_item_not_found(mock_op_client, mock_vault):
                 item="NonExistentItem",
                 schema=SimpleConfig,
             )
+
+
+@pytest.mark.asyncio
+async def test_load_config_keeps_token_out_of_logs(caplog):
+    """Test that a retried authentication failure never logs the token."""
+    canary = "ops_leak_canary"
+    caplog.set_level(DEBUG)
+    with (
+        capture_logs() as structlog_events,
+        patch("configator.core.OnePasswordClient.authenticate") as mock_auth,
+    ):
+        mock_auth.side_effect = Exception("invalid service account token")
+
+        with pytest.raises(ConfigUnavailableError):
+            await load_config(
+                token=canary, vault="TestVault", item="TestItem", schema=SimpleConfig
+            )
+
+    assert mock_auth.call_count == EXPECTED_RETRY_ATTEMPTS
+    assert any(e["event"] == "stamina.retry_scheduled" for e in structlog_events)
+    assert canary not in repr(structlog_events)
+    assert canary not in caplog.text
 
 
 # Tests for the exception hierarchy
