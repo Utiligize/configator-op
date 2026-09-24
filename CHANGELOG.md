@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - chore: clear dist before building ([c4ac436])
 - chore(ci): remove DefectDojo upload step ([08363b0])
+- chore(ci): pin just version in setup-just ([4e9cd51])
 
 ## [3000.7.0] - 2026-08-28
 
@@ -205,6 +206,7 @@ Initial release.
 [387f552]: https://github.com/Utiligize/configator-op/commit/387f5525824ab4f6f2efde1d3b97c8758e3678d3
 [397b932]: https://github.com/Utiligize/configator-op/commit/397b9329e21509d89d965807807b388b49da5dc0
 [4de6b3e]: https://github.com/Utiligize/configator-op/commit/4de6b3e5bcc06d921f3c263dd692c5ecdf95762c
+[4e9cd51]: https://github.com/Utiligize/configator-op/commit/4e9cd51b4f37e5ebdda49c090c3c08e7f76c3eaf
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f
 [5216dfc]: https://github.com/Utiligize/configator-op/commit/5216dfc83b3b52cea84a62e7d62cfbe9c6e1b625
 [579567d]: https://github.com/Utiligize/configator-op/commit/579567d6bd872896f25d8f0b8f9e2773407bcb59
