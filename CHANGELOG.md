@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - chore(ci): remove DefectDojo upload step ([08363b0])
 - chore(ci): pin just version in setup-just ([4e9cd51])
 
+### Security
+
+- fix: keep 1Password token out of retry logs ([ac7faff])
+
 ## [3000.7.0] - 2026-08-28
 
 ### Added
@@ -235,6 +239,7 @@ Initial release.
 [981fc8f]: https://github.com/Utiligize/configator-op/commit/981fc8f4087cef661888e93bf8d147a085f04dc6
 [99405f2]: https://github.com/Utiligize/configator-op/commit/99405f2b6fd941be0db12201c4a44c0c065babcb
 [9e302e2]: https://github.com/Utiligize/configator-op/commit/9e302e207124fdabdbbf3a358dcb971d9edf7e9c
+[ac7faff]: https://github.com/Utiligize/configator-op/commit/ac7fafffd8174c1e35f5aa4f8a850b5cc8b02cc4
 [af8a42b]: https://github.com/Utiligize/configator-op/commit/af8a42bb59c2767724102d2a85d8f191ff53620d
 [b2a90f8]: https://github.com/Utiligize/configator-op/commit/b2a90f8d6a87ee0aee70e38204866b011b6232fe
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d

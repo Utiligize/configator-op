@@ -16,7 +16,7 @@ from typing import Any, get_origin
 from onepassword.client import Client as OnePasswordClient
 from onepassword.errors import RateLimitExceededException
 from onepassword.types import Item, ItemField, ItemOverview, ResolveAllResponse, VaultOverview
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, SecretStr, ValidationError
 from pydantic.fields import PydanticUndefined
 from stamina import retry
 
@@ -66,7 +66,9 @@ async def load_config[T: BaseModel](*, token: str, vault: str, item: str, schema
     """Return an initialized schema instance."""
     log.debug("loading configuration into schema '%s'", schema.__name__)
 
-    client = await _call_1password(_get_client(token), "failed to authenticate with 1Password")
+    client = await _call_1password(
+        _get_client(SecretStr(token)), "failed to authenticate with 1Password"
+    )
 
     vault_overview = await _call_1password(
         _get_vault_overview(client, vault), f"failed to look up vault '{vault}'"
@@ -118,13 +120,17 @@ def _field_matcher(field: ItemField, *, title: str, section_id: str | None = Non
 
 
 @_retry()
-async def _get_client(token: str) -> OnePasswordClient:
-    """Initialize 1Password client."""
+async def _get_client(token: SecretStr) -> OnePasswordClient:
+    """Initialize 1Password client.
+
+    The token is taken as a ``SecretStr`` because stamina logs the ``repr`` of every
+    argument when it schedules a retry.
+    """
     pkg_name = "configator_op"
     pkg_version = version(pkg_name)
     log.debug("instantiating 1Password client (%s-%s)", pkg_name, pkg_version)
     op_client = await OnePasswordClient.authenticate(
-        auth=token,
+        auth=token.get_secret_value(),
         integration_name=pkg_name,
         integration_version=pkg_version,
     )
