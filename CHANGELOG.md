@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - chore: add just release recipe ([1926eb3])
 
+### Security
+
+- docs: mark 3000.6.0 and 3000.7.0 as yanked ([5a12e41])
+
 ## [3000.7.1] - 2026-09-25
 
 ### Changed
@@ -24,7 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - fix: keep 1Password token out of retry logs ([96d20ce])
 
-## [3000.7.0] - 2026-08-28
+## [3000.7.0] - 2026-08-28 [YANKED]
 
 ### Added
 
@@ -34,7 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - chore: extend copyright headers to 2025-2026 ([5e8f6fe])
 
-## [3000.6.0] - 2026-08-18
+## [3000.6.0] - 2026-08-18 [YANKED]
 
 ### Added
 
@@ -223,6 +227,7 @@ Initial release.
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f
 [5216dfc]: https://github.com/Utiligize/configator-op/commit/5216dfc83b3b52cea84a62e7d62cfbe9c6e1b625
 [579567d]: https://github.com/Utiligize/configator-op/commit/579567d6bd872896f25d8f0b8f9e2773407bcb59
+[5a12e41]: https://github.com/Utiligize/configator-op/commit/5a12e4117f2e84497d56d267386845155ee396f0
 [5bd3fb9]: https://github.com/Utiligize/configator-op/commit/5bd3fb9456d2bb37fc494cc6acb8d28349754709
 [5ddbe83]: https://github.com/Utiligize/configator-op/commit/5ddbe839ddbb42fe72c1d5acffa2751ced5f967c
 [5e63002]: https://github.com/Utiligize/configator-op/commit/5e6300203382896eed1b4b5a12c3fd51ce55453f
