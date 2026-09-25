@@ -24,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - fix: keep 1Password token out of retry logs ([96d20ce])
 
-## [3000.7.0] - 2026-08-28
+## [3000.7.0] - 2026-08-28 [YANKED]
 
 ### Added
 
@@ -34,7 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - chore: extend copyright headers to 2025-2026 ([5e8f6fe])
 
-## [3000.6.0] - 2026-08-18
+## [3000.6.0] - 2026-08-18 [YANKED]
 
 ### Added
 
