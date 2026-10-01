@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - chore: add just release recipe ([1926eb3])
 
+### Fixed
+
+- fix: log developer mode once per load, not once per section ([e07736d])
+
 ### Security
 
 - docs: mark 3000.6.0 and 3000.7.0 as yanked ([5a12e41])
@@ -262,6 +266,7 @@ Initial release.
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
 [d7ae1b7]: https://github.com/Utiligize/configator-op/commit/d7ae1b778b7798f0cca0fa4aa3611008aaef6b29
 [d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953
+[e07736d]: https://github.com/Utiligize/configator-op/commit/e07736d851d7d73b1e14c25c96df816a4b89b840
 [e0991b6]: https://github.com/Utiligize/configator-op/commit/e0991b65e5508de5c94be1c340876fbd12fea414
 [e5a453a]: https://github.com/Utiligize/configator-op/commit/e5a453ac59fe11fbea083b9168289ef111424dc4
 [e9b89e5]: https://github.com/Utiligize/configator-op/commit/e9b89e5803473b165fd735b77fc75f71405e4ef5
