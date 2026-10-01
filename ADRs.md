@@ -435,12 +435,12 @@ All common configuration models (`PostgresConfig`, `SentryConfig`) extend `Confi
   - Additional complexity: Two different priority modes to understand and document.
   - Potential confusion: Developers must remember to enable developer mode and understand priority changes.
   - pydantic-settings dependency: Adds pydantic-settings as a required dependency.
-  - Mode indicator noise: Warning log on every instantiation (though useful for awareness).
+  - Mode indicator noise: Warning log once per `load_config()` call, however many sections the schema has, and once per context for models instantiated directly (though useful for awareness).
   - Not applicable to core loading: Only works with provided common models, not custom BaseModel schemas.
 
 - Operational considerations
   - .env files should never be committed to version control (add to .gitignore).
-  - Developer mode should never be enabled in production environments. This is enforced: when `CONFIGATOR_DEV_MODE` is set while `ENVIRONMENT` (fallback `APP_ENV`) resolves to production — matched case-insensitively against the `Environment.PRODUCTION` prefix (`product`) — instantiating a config model raises a `RuntimeError` instead of silently letting a `.env` file override vetted secrets.
+  - Developer mode should never be enabled in production environments. This is enforced: when `CONFIGATOR_DEV_MODE` is set while `ENVIRONMENT` (fallback `APP_ENV`) resolves to production — matched case-insensitively against the `Environment.PRODUCTION` prefix (`product`) — instantiating a config model raises a `RuntimeError` instead of silently letting a `.env` file override vetted secrets. `load_config()` with a `ConfigatorSettings` schema raises the same error before making any 1Password request.
   - Teams should document when and how to use developer mode in development guides.
   - .env file format must match pydantic-settings expectations (KEY=value).
 

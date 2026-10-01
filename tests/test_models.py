@@ -1,7 +1,9 @@
+from contextvars import Context
 from os import getenv
 
 import pytest
 from pydantic import SecretStr, ValidationError
+from structlog.testing import capture_logs
 
 from configator.models import PostgresConfig, SentryConfig
 
@@ -154,3 +156,18 @@ def test_dev_mode_allowed_outside_production(monkeypatch):
         monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
         monkeypatch.setenv("ENVIRONMENT", "staging")
         _ = PostgresConfig()
+
+
+def test_dev_mode_logged_once_outside_load_config(monkeypatch):
+    """Settings built directly log the developer mode once, not once per instance."""
+    monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    monkeypatch.delenv("APP_ENV", raising=False)
+
+    def build_twice() -> list[str]:
+        with capture_logs() as events:
+            _ = PostgresConfig()
+            _ = PostgresConfig()
+        return [e["event"] for e in events]
+
+    assert Context().run(build_twice) == ["configator developer mode is ENABLED"]

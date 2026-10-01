@@ -22,6 +22,7 @@ from stamina import retry
 
 from .errors import ConfigInvalidError, ConfigUnavailableError
 from .log import get_logger
+from .models import ConfigatorSettings, _dev_mode_logged_once, _refuse_dev_mode_in_production
 
 log = get_logger()
 
@@ -65,6 +66,8 @@ _retry = partial(
 async def load_config[T: BaseModel](*, token: str, vault: str, item: str, schema: type[T]) -> T:
     """Return an initialized schema instance."""
     log.debug("loading configuration into schema '%s'", schema.__name__)
+    if issubclass(schema, ConfigatorSettings):
+        _refuse_dev_mode_in_production()
 
     client = await _call_1password(
         _get_client(SecretStr(token)), "failed to authenticate with 1Password"
@@ -90,7 +93,8 @@ async def load_config[T: BaseModel](*, token: str, vault: str, item: str, schema
 
     resolved, resolve_requests = await _resolve_references(client, cfg_item)
 
-    config = _hydrate_model(resolved=resolved, schema=schema, item=cfg_item)
+    with _dev_mode_logged_once():
+        config = _hydrate_model(resolved=resolved, schema=schema, item=cfg_item)
     log.info(
         "loaded configuration into schema '%s' using %d 1Password request(s)",
         schema.__name__,
