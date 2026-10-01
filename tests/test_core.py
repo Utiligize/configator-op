@@ -46,6 +46,7 @@ from configator.core import (
     load_config,
 )
 from configator.errors import ConfigatorError, ConfigInvalidError, ConfigUnavailableError
+from configator.models import ConfigatorSettings
 
 # Stated independently of the production constant so that lowering the retry budget
 # fails the retry tests instead of silently changing what they assert.
@@ -98,6 +99,25 @@ class BoundedConfig(BaseModel):
     """Schema whose validation rejects an out-of-range value."""
 
     ratio: float = Field(le=1.0)
+
+
+class DevModeAlpha(ConfigatorSettings):
+    """First section of a settings schema."""
+
+    alpha_flag: bool
+
+
+class DevModeBeta(ConfigatorSettings):
+    """Second section of a settings schema."""
+
+    beta_count: int
+
+
+class DevModeConfig(ConfigatorSettings):
+    """Settings schema split into two sections."""
+
+    alpha: DevModeAlpha
+    beta: DevModeBeta
 
 
 # Fixtures
@@ -1307,3 +1327,111 @@ async def test_load_config_complex_schema_idempotent(
         )
 
         assert first == second
+
+
+# Tests for developer mode logging
+def _dev_mode_item() -> Item:
+    return Item(
+        id="item456",
+        title="TestItem",
+        vaultId="vault123",
+        category="Login",
+        fields=[
+            ItemField(
+                id="f1", title="alpha-flag", fieldType="Text", value="yes", sectionId="sec_a"
+            ),
+            ItemField(id="f2", title="beta-count", fieldType="Text", value="7", sectionId="sec_b"),
+        ],
+        sections=[ItemSection(id="sec_a", title="Alpha"), ItemSection(id="sec_b", title="Beta")],
+        notes="",
+        tags=[],
+        websites=[],
+        version=1,
+        files=[],
+        createdAt="2024-01-01T00:00:00Z",
+        updatedAt="2024-01-01T00:00:00Z",
+    )
+
+
+async def _load_dev_mode_config(
+    op_client: AsyncMock, vault: VaultOverview, item_overview: ItemOverview
+) -> list[str]:
+    """Load DevModeConfig and return the developer mode log events it emitted."""
+    op_client.vaults.list.return_value = [vault]
+    op_client.items.list.return_value = [item_overview]
+    op_client.items.get.return_value = _dev_mode_item()
+    op_client.secrets.resolve_all.side_effect = _echo_resolve_all
+    with (
+        capture_logs() as events,
+        patch("configator.core._get_client", return_value=op_client),
+    ):
+        config = await load_config(
+            token="test_token", vault="TestVault", item="TestItem", schema=DevModeConfig
+        )
+    assert config.alpha.alpha_flag is True
+    assert config.beta.beta_count == 7
+    return [e["event"] for e in events if e["event"].startswith("configator developer mode")]
+
+
+@pytest.mark.asyncio
+async def test_load_config_logs_dev_mode_enabled_once(
+    monkeypatch, mock_op_client, mock_vault, mock_item_overview
+):
+    """A schema with several sections logs the enabled developer mode once per load."""
+    monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    monkeypatch.delenv("APP_ENV", raising=False)
+
+    first = await _load_dev_mode_config(mock_op_client, mock_vault, mock_item_overview)
+    second = await _load_dev_mode_config(mock_op_client, mock_vault, mock_item_overview)
+
+    assert first == ["configator developer mode is ENABLED"]
+    assert second == ["configator developer mode is ENABLED"]
+
+
+@pytest.mark.asyncio
+async def test_load_config_logs_dev_mode_disabled_once(
+    monkeypatch, mock_op_client, mock_vault, mock_item_overview
+):
+    """A schema with several sections logs the disabled developer mode once per load."""
+    monkeypatch.delenv("CONFIGATOR_DEV_MODE", raising=False)
+
+    events = await _load_dev_mode_config(mock_op_client, mock_vault, mock_item_overview)
+
+    assert events == ["configator developer mode is disabled"]
+
+
+@pytest.mark.asyncio
+async def test_load_config_refuses_dev_mode_in_production_before_1password(monkeypatch):
+    """A settings schema refuses developer mode in production before any 1Password request."""
+    monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    with (
+        patch("configator.core._get_client") as mock_get_client,
+        pytest.raises(RuntimeError, match="CONFIGATOR_DEV_MODE"),
+    ):
+        await load_config(
+            token="test_token", vault="TestVault", item="TestItem", schema=DevModeConfig
+        )
+    mock_get_client.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_load_config_plain_schema_ignores_dev_mode_in_production(
+    monkeypatch, mock_op_client, mock_vault, mock_item_overview, mock_item
+):
+    """A plain BaseModel schema is unaffected by developer mode, so it is not refused."""
+    monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    mock_op_client.vaults.list.return_value = [mock_vault]
+    mock_op_client.items.list.return_value = [mock_item_overview]
+    mock_op_client.items.get.return_value = mock_item
+    mock_op_client.secrets.resolve_all.side_effect = _echo_resolve_all
+    with (
+        capture_logs() as events,
+        patch("configator.core._get_client", return_value=mock_op_client),
+    ):
+        await load_config(
+            token="test_token", vault="TestVault", item="TestItem", schema=ComplexConfig
+        )
+    assert not [e for e in events if e["event"].startswith("configator developer mode")]

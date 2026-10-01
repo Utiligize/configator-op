@@ -75,7 +75,8 @@ Without developer mode, the standard priority applies (1Password values take pre
 > `CONFIGATOR_DEV_MODE` is set while `ENVIRONMENT` (or, as a fallback, `APP_ENV`)
 > resolves to production — any value case-insensitively starting with `product`,
 > e.g. `product` or `production` — instantiating a config model raises a
-> `RuntimeError`. Production deployments must ensure `CONFIGATOR_DEV_MODE` is
+> `RuntimeError`, as does `load_config()` with a `ConfigatorSettings` schema,
+> before any 1Password request. Production deployments must ensure `CONFIGATOR_DEV_MODE` is
 > unset and that no `.env` file ships in production images.
 
 This feature works with the provided common configuration models (`PostgresConfig`, `SentryConfig`). For your own config schemas, you can simply extend `ConfigatorSettings` to get this behavior.
