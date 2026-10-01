@@ -7,22 +7,13 @@
 # License-Filename: LICENSE.md                                                                    #
 ###################################################################################################
 
-from collections.abc import Generator
-from contextlib import contextmanager
-from contextvars import ContextVar
 from enum import StrEnum, unique
-from os import getenv
 
 from pydantic import Field, HttpUrl, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
-from .log import get_logger
-
-log = get_logger()
-
-# Every ConfigatorSettings instance, one per section included, picks its sources, so the
-# developer mode is logged by the first and skipped by the rest.
-_dev_mode_logged: ContextVar[bool] = ContextVar("configator_dev_mode_logged", default=False)
+from .environment import Environment as Environment
+from .environment import dev_mode_enabled, log_dev_mode_once, refuse_dev_mode_in_production
 
 
 class ConfigatorSettings(BaseSettings):
@@ -48,57 +39,12 @@ class ConfigatorSettings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        _refuse_dev_mode_in_production()
-        dev_mode = getenv("CONFIGATOR_DEV_MODE", None)
-        log_msg = "configator developer mode is %s"
-        log_once = not _dev_mode_logged.get()
-        _dev_mode_logged.set(True)
-        if dev_mode:
-            if log_once:
-                log.warning(log_msg, "ENABLED")
+        refuse_dev_mode_in_production()
+        log_dev_mode_once()
+        if dev_mode_enabled():
             return dotenv_settings, env_settings, init_settings, file_secret_settings
         else:
-            if log_once:
-                log.debug(log_msg, "disabled")
             return init_settings, env_settings, dotenv_settings, file_secret_settings
-
-
-@contextmanager
-def _dev_mode_logged_once() -> Generator[None, None, None]:
-    """Log the developer mode once for all settings built inside the block."""
-    token = _dev_mode_logged.set(False)
-    try:
-        yield
-    finally:
-        _dev_mode_logged.reset(token)
-
-
-def _refuse_dev_mode_in_production() -> None:
-    """Raise if developer mode is enabled in a production environment."""
-    if getenv("CONFIGATOR_DEV_MODE") and _is_production():
-        raise RuntimeError(
-            "CONFIGATOR_DEV_MODE is set in a production environment; refusing to let "
-            "a .env file override vetted secrets. Unset CONFIGATOR_DEV_MODE (and ensure "
-            "no .env ships in production images)."
-        )
-
-
-@unique
-class Environment(StrEnum):
-    DEVELOPMENT = "develop"
-    STAGING = "staging"
-    PRODUCTION = "product"
-
-
-def _is_production() -> bool:
-    """Return True when the deployment environment resolves to production.
-
-    Reads ``ENVIRONMENT`` first, falling back to ``APP_ENV``, and matches the
-    value case-insensitively against the ``Environment.PRODUCTION`` prefix so
-    both ``product`` and ``production`` are recognised.
-    """
-    env = getenv("ENVIRONMENT") or getenv("APP_ENV") or ""
-    return env.lower().startswith(Environment.PRODUCTION)
 
 
 @unique

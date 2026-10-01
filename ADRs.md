@@ -361,7 +361,7 @@ Many applications need similar configuration structures (database connections, S
 
 Provide common configuration models in `configator.models` module:
 
-- `Environment`: Enum for dev/staging/prod environments
+- `Environment`: Enum for dev/staging/prod environments (defined in `configator.environment` alongside the developer mode helpers, and re-exported from `configator.models`)
 - `PostgresConfig`: Standard PostgreSQL connection parameters with DSN builder
 - `PostgresSSLMode`: Enum for PostgreSQL SSL modes
 - `SentryConfig`: Sentry DSN and common settings

@@ -8,9 +8,10 @@
 from importlib.metadata import version
 
 from configator.core import load_config
+from configator.environment import Environment
 from configator.errors import ConfigatorError, ConfigInvalidError, ConfigUnavailableError
 from configator.log import configure_logging
-from configator.models import ConfigatorSettings, Environment, PostgresConfig, SentryConfig
+from configator.models import ConfigatorSettings, PostgresConfig, SentryConfig
 
 __maintainer__ = "kthy"
 __version__ = version("configator-op")
