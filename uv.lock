@@ -213,6 +213,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "stamina" },
     { name = "structlog" },
+    { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
@@ -243,6 +244,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'test'" },
     { name = "stamina", specifier = ">=25.1,<27" },
     { name = "structlog", specifier = ">=25,<27" },
+    { name = "typing-extensions", specifier = ">=4.13,<5" },
 ]
 provides-extras = ["test"]
 

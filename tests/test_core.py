@@ -2,7 +2,7 @@
 
 from json import JSONDecodeError
 from logging import DEBUG
-from typing import Any
+from typing import Any, Literal, NewType
 from unittest.mock import AsyncMock, patch
 
 from onepassword.errors import RateLimitExceededException
@@ -99,6 +99,39 @@ class BoundedConfig(BaseModel):
     """Schema whose validation rejects an out-of-range value."""
 
     ratio: float = Field(le=1.0)
+
+
+class LiteralConfig(BaseModel):
+    """Schema with fields restricted to a fixed set of values."""
+
+    mode: Literal["fast", "safe"]
+    level: Literal[1, 2] = 1
+
+
+class BoolLiteralConfig(BaseModel):
+    """Schema with a Literal holding a bool member."""
+
+    strict: Literal[True]
+
+
+UserId = NewType("UserId", str)
+Hosts = NewType("Hosts", list[str])
+type Port = int
+type Pair[T] = tuple[T, T]
+
+
+class AliasConfig(BaseModel):
+    """Schema with fields annotated by NewType and type statement aliases."""
+
+    user: UserId
+    hosts: Hosts
+    port: Port
+
+
+class GenericAliasConfig(BaseModel):
+    """Schema with a parameterized type statement alias, which is not a class."""
+
+    pair: Pair[int]
 
 
 class DevModeAlpha(ConfigatorSettings):
@@ -1236,6 +1269,58 @@ def test_hydrate_model_unparseable_int_is_invalid():
 
     with pytest.raises(ConfigInvalidError, match="failed to parse field 'field_two' as int"):
         _hydrate_model(resolved={}, schema=SimpleConfig, item=item)
+
+
+def test_hydrate_model_literal():
+    """Test that Literal fields load the member whose string form matches the value."""
+    item = _item_with_fields(mode="safe", level="2")
+
+    result = _hydrate_model(resolved={}, schema=LiteralConfig, item=item)
+
+    assert result.mode == "safe"
+    assert result.level == 2
+
+
+def test_hydrate_model_literal_default():
+    """Test that an absent Literal field falls back to its default."""
+    result = _hydrate_model(resolved={}, schema=LiteralConfig, item=_item_with_fields(mode="fast"))
+
+    assert result.level == 1
+
+
+def test_hydrate_model_literal_out_of_set_is_invalid():
+    """Test that a value outside a Literal's members reads as a misconfiguration."""
+    item = _item_with_fields(mode="turbo")
+
+    with pytest.raises(ConfigInvalidError, match="field 'mode' must be one of 'fast', 'safe'"):
+        _hydrate_model(resolved={}, schema=LiteralConfig, item=item)
+
+
+def test_hydrate_model_bool_literal_is_invalid():
+    """Test that a Literal with a bool member is rejected before any value is parsed."""
+    item = _item_with_fields()
+
+    with pytest.raises(ConfigInvalidError, match="field 'strict' is a Literal with members"):
+        _hydrate_model(resolved={}, schema=BoolLiteralConfig, item=item)
+
+
+def test_hydrate_model_aliases():
+    """Test that NewType and type statement aliases hydrate as the type they stand for."""
+    item = _item_with_fields(user="u1", hosts='["a", "b"]', port="8080")
+
+    result = _hydrate_model(resolved={}, schema=AliasConfig, item=item)
+
+    assert result.user == "u1"
+    assert result.hosts == ["a", "b"]
+    assert result.port == 8080
+
+
+def test_hydrate_model_unsupported_annotation_is_invalid():
+    """Test that an annotation that is not a class reads as a misconfiguration, not a crash."""
+    item = _item_with_fields(pair="[1, 2]")
+
+    with pytest.raises(ConfigInvalidError, match="field 'pair' has unsupported type"):
+        _hydrate_model(resolved={}, schema=GenericAliasConfig, item=item)
 
 
 def test_hydrate_model_validation_failure_is_invalid():
