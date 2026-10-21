@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- feat: support Python 3.15 ([2b2a867])
+
 ## [3000.7.2] - 2026-10-01
 
 ### Added
@@ -231,6 +235,7 @@ Initial release.
 [1e703ba]: https://github.com/Utiligize/configator-op/commit/1e703ba6cf51da6eebe3f536e2e84ae903fb96c8
 [21d2a5f]: https://github.com/Utiligize/configator-op/commit/21d2a5f7ce3c4f68bc8d702eca0cf34fa2d77d21
 [2aa9d2e]: https://github.com/Utiligize/configator-op/commit/2aa9d2e884ba7e99ecdd6cf73ef10f2721340cb9
+[2b2a867]: https://github.com/Utiligize/configator-op/commit/2b2a867bb0294a5bfcfdbb71ef6eb1f890f0e35d
 [2fbb13e]: https://github.com/Utiligize/configator-op/commit/2fbb13e9ab59dd72fce7f8d70cde51398d75f814
 [387f552]: https://github.com/Utiligize/configator-op/commit/387f5525824ab4f6f2efde1d3b97c8758e3678d3
 [397b932]: https://github.com/Utiligize/configator-op/commit/397b9329e21509d89d965807807b388b49da5dc0
