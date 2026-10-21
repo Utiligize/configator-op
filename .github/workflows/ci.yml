@@ -70,7 +70,7 @@ jobs:
     name: Test - Python ${{ matrix.python-version }}
     strategy:
       matrix:
-        python-version: ["3.12", "3.13", "3.14"]
+        python-version: ["3.12", "3.13", "3.14", "3.15"]
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
