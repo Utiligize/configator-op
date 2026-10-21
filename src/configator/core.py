@@ -12,12 +12,22 @@ from functools import partial
 from importlib.metadata import version
 from json import JSONDecodeError, loads
 from types import NoneType, UnionType
-from typing import Any, Literal, NewType, TypeAliasType, Union, cast, get_args, get_origin
+from typing import (
+    Annotated,
+    Any,
+    Literal,
+    NewType,
+    TypeAliasType,
+    Union,
+    cast,
+    get_args,
+    get_origin,
+)
 
 from onepassword.client import Client as OnePasswordClient
 from onepassword.errors import RateLimitExceededException
 from onepassword.types import Item, ItemField, ItemOverview, ResolveAllResponse, VaultOverview
-from pydantic import BaseModel, SecretStr, ValidationError
+from pydantic import BaseModel, SecretStr, TypeAdapter, ValidationError
 from pydantic.fields import PydanticUndefined
 from stamina import retry
 from typing_extensions import TypeForm
@@ -295,22 +305,25 @@ def _parse_literal(str_val: str, *, members: tuple[str | int, ...], key: str) ->
 def _parse_union(
     str_val: str,
     *,
-    members: tuple[tuple[str, Callable[[str], Any]], ...],
+    members: tuple[tuple[str, Callable[[str], Any], TypeAdapter[Any]], ...],
     optional: bool,
     key: str,
 ) -> Any:
     """Parse a union field as its first member, in declaration order, that accepts the value.
 
-    An empty value makes an optional field None.
+    A member accepts the value when it parses and the result passes that member's own
+    validation; otherwise list[int] would take ["a"], and the schema-wide validation would
+    then pick whichever member Pydantic's smart union prefers. An empty value makes an
+    optional field None.
     """
     if optional and str_val == "":
         return None
-    for _, parse in members:
+    for _, parse, adapter in members:
         try:
-            return parse(str_val)
-        except ConfigInvalidError:
+            return adapter.validate_python(parse(str_val))
+        except (ConfigInvalidError, ValidationError):
             continue
-    names = ", ".join(name for name, _ in members)
+    names = ", ".join(name for name, _, _ in members)
     raise ConfigInvalidError(f"field '{key}' does not parse as any of {names}")
 
 
@@ -342,7 +355,11 @@ def _parser(cls: TypeForm[Any], key: str) -> Callable[[str], Any]:
     if origin is Union or origin is UnionType:
         args = get_args(cls)
         members = tuple(
-            (getattr(arg, "__name__", repr(arg)), _parser(arg, key))
+            (
+                arg.__name__ if isinstance(arg, type) else repr(arg),
+                _parser(arg, key),
+                TypeAdapter(arg),
+            )
             for arg in args
             if arg is not NoneType
         )
@@ -400,14 +417,20 @@ async def _resolve_references(
 
 
 def _unwrap_alias(cls: TypeForm[Any]) -> TypeForm[Any]:
-    """Resolve NewType and type statement aliases to the type they stand for."""
-    while isinstance(cls, (NewType, TypeAliasType)):
-        if isinstance(cls, NewType):
+    """Resolve NewType, type statement aliases and Annotated to the type they stand for.
+
+    Pydantic strips Annotated from a field's own annotation, but not from union members.
+    """
+    while True:
+        if get_origin(cls) is Annotated:
+            cls = get_args(cls)[0]
+        elif isinstance(cls, NewType):
             # typeshed types __supertype__ as type | NewType, though any type form is allowed.
             cls = cast("TypeForm[Any]", cls.__supertype__)
-        else:
+        elif isinstance(cls, TypeAliasType):
             cls = cls.__value__
-    return cls
+        else:
+            return cls
 
 
 def _unwrap_resolved(response: ResolveAllResponse) -> dict[str, str]:

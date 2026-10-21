@@ -2,7 +2,7 @@
 
 from json import JSONDecodeError
 from logging import DEBUG
-from typing import Any, Literal, NewType, Optional
+from typing import Annotated, Any, Literal, NewType, Optional
 from unittest.mock import AsyncMock, patch
 
 from onepassword.errors import RateLimitExceededException
@@ -155,6 +155,13 @@ class SectionUnionConfig(BaseModel):
     """Schema with a nested section inside a union."""
 
     section: SectionConfig | None = None
+
+
+class ValidatedUnionConfig(BaseModel):
+    """Schema whose union members only differ once their items or constraints are validated."""
+
+    ids: list[int] | list[str]
+    level: Annotated[int, Field(gt=0)] | str
 
 
 class DevModeAlpha(ConfigatorSettings):
@@ -1403,6 +1410,23 @@ def test_hydrate_model_union_declaration_order():
 
     assert result.port == "http"
     assert [e for e in events if e["log_level"] == "error"] == []
+
+
+@pytest.mark.parametrize(
+    ("ids", "level", "expected_ids", "expected_level"),
+    [
+        ('["1"]', "5", [1], 5),
+        ('["a"]', "-1", ["a"], "-1"),
+    ],
+)
+def test_hydrate_model_union_member_is_validated(ids, level, expected_ids, expected_level):
+    """Test that a union member must pass its own validation, not just construct, to be taken."""
+    item = _item_with_fields(ids=ids, level=level)
+
+    result = _hydrate_model(resolved={}, schema=ValidatedUnionConfig, item=item)
+
+    assert result.ids == expected_ids
+    assert result.level == expected_level
 
 
 def test_hydrate_model_union_without_matching_member_is_invalid():

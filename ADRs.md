@@ -672,7 +672,10 @@ empty value means for an optional field, and which member of a union a string be
   schema's default. A field absent from the item still falls back to its default.
 - A union tries its non-`None` members in declaration order with the same parsing a plain field
   of that type gets (JSON collections, ADR-008 booleans, `Literal` matching), and takes the first
-  that parses. If none parses, the field is a `ConfigInvalidError`.
+  whose parsed value also passes that member's own Pydantic validation (item types, `Field`
+  constraints). If none does, the field is a `ConfigInvalidError`. Without the per-member check,
+  `list[int]` would accept `["a"]`, and the schema-wide validation would then pick whichever
+  member Pydantic's smart union prefers, regardless of declaration order.
 - A nested model (section) inside a union is refused up front.
 - The final Pydantic validation of the whole schema remains the last word on every value.
 
@@ -690,7 +693,8 @@ strings while `bool` accepts only the 8 from ADR-008.
 - Costs / Trade-offs
   - An optional `str` field cannot hold an empty string; empty always means `None`.
   - Member order matters: `str | int` never yields an `int`, because a `str` accepts any value.
-  - Each member that fails before one succeeds costs a parse attempt; negligible at config sizes.
+  - Each member that fails before one succeeds costs a parse and a validation; negligible at
+    config sizes.
 
 - Operational considerations
   - Clearing a value in 1Password is now meaningful for optional fields: it sets them to `None`

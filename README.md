@@ -117,7 +117,7 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
 - Optional and union fields (`str | None`, `Optional[int]`, `int | str`) are supported:
   - An optional field loads exactly like its inner type when the value in 1Password is non-empty.
   - An **empty** value in 1Password makes an optional field `None`, even if the schema gives it a non-`None` default. This lets the 1Password item switch a setting off. A field that is **absent** from the item still falls back to its default, and without a default it is still a `ConfigInvalidError`.
-  - A union of several types tries them **in the order they are declared** and takes the first that parses, using the same parsing rules as a plain field of that type (JSON for collections, the 8 boolean strings for `bool`, member matching for `Literal`). Put the most specific type first: `port: int | str` reads `"8080"` as `8080`, but `port: str | int` reads it as `"8080"`, because a `str` accepts anything.
+  - A union of several types tries them **in the order they are declared** and takes the first that parses, using the same parsing rules as a plain field of that type (JSON for collections, the 8 boolean strings for `bool`, member matching for `Literal`). The parsed value must also pass that member's own validation, so `list[int] | list[str]` reads `["1"]` as `[1]` and `["a"]` as `["a"]`, and `Annotated[int, Field(gt=0)] | str` reads `"-1"` as `"-1"`. Put the most specific type first: `port: int | str` reads `"8080"` as `8080`, but `port: str | int` reads it as `"8080"`, because a `str` accepts anything.
   - If no member parses the value, loading fails with a `ConfigInvalidError` naming the types tried.
 
   ```python
