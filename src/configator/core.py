@@ -11,7 +11,7 @@ from collections.abc import Awaitable, Mapping
 from functools import partial
 from importlib.metadata import version
 from json import JSONDecodeError, loads
-from typing import Any, get_origin
+from typing import Any, Literal, NewType, TypeAliasType, cast, get_args, get_origin
 
 from onepassword.client import Client as OnePasswordClient
 from onepassword.errors import RateLimitExceededException
@@ -19,6 +19,7 @@ from onepassword.types import Item, ItemField, ItemOverview, ResolveAllResponse,
 from pydantic import BaseModel, SecretStr, ValidationError
 from pydantic.fields import PydanticUndefined
 from stamina import retry
+from typing_extensions import TypeForm
 
 from .environment import dev_mode_log_scope, refuse_dev_mode_in_production
 from .errors import ConfigInvalidError, ConfigUnavailableError
@@ -186,25 +187,32 @@ async def _get_vault_overview(
 def _hydrate_field(
     *,
     resolved: Mapping[str, str],
-    cls: Any,
+    cls: TypeForm[Any],
     item: Item,
     key: str,
     default: Any,
     section_id: str | None = None,
 ) -> Any:
     """Hydrate single field from 1Password item."""
-    wet_fields = item.fields
+    cls = _unwrap_alias(cls)
     # Parameterized generics (e.g. list[str]) are not classes, so resolve them to their
     # origin before any issubclass() check; non-generic annotations are their own origin.
     origin = get_origin(cls) or cls
-    if issubclass(origin, BaseModel):
-        sections = _get_sections(item)
-        return _hydrate_model(
-            resolved=resolved, schema=cls, item=item, section_id=sections[key.lower()]
-        )
+    if origin is Literal:
+        parse = partial(_parse_literal, members=_literal_members(cls, key))
+    elif isinstance(origin, type):
+        if issubclass(origin, BaseModel):
+            sections = _get_sections(item)
+            return _hydrate_model(
+                resolved=resolved, schema=origin, item=item, section_id=sections[key.lower()]
+            )
+        parse = partial(_parse_value, origin=origin)
+    else:
+        log.error("field '%s' has unsupported type %r", key, cls)
+        raise ConfigInvalidError(f"field '{key}' has unsupported type {cls!r}")
 
     matcher = partial(_field_matcher, title=key.lower(), section_id=section_id)
-    wet_field = next(filter(matcher, wet_fields), None)
+    wet_field = next(filter(matcher, item.fields), None)
     if wet_field is None:
         if default is PydanticUndefined:
             log.error("field '%s' not found and no default value provided", key)
@@ -212,19 +220,7 @@ def _hydrate_field(
         log.debug("using default value for field '%s'", key)
         return default
 
-    str_val = resolved.get(wet_field.value, wet_field.value)
-    try:
-        if issubclass(origin, (dict, list, set, tuple)):
-            return cls(loads(str_val))
-        if issubclass(origin, bool):
-            return _parse_bool(str_val)
-        return cls(str_val)  # type: ignore[call-arg]
-    except JSONDecodeError as jde:
-        log.error("failed to parse field '%s' as JSON: %s", key, str(jde))
-        raise ConfigInvalidError(f"failed to parse field '{key}' as JSON") from jde
-    except (TypeError, ValueError) as exc:
-        log.error("failed to parse field '%s' as %s: %s", key, origin.__name__, str(exc))
-        raise ConfigInvalidError(f"failed to parse field '{key}' as {origin.__name__}") from exc
+    return parse(resolved.get(wet_field.value, wet_field.value), key=key)
 
 
 def _hydrate_model[T: BaseModel](
@@ -261,6 +257,16 @@ def _hydrate_model[T: BaseModel](
         raise ConfigInvalidError(f"config does not fit schema '{schema.__name__}'") from ve
 
 
+def _literal_members(cls: TypeForm[Any], key: str) -> tuple[str | int, ...]:
+    """Return the members of a Literal annotation, refusing any that are not str or int."""
+    members = get_args(cls)
+    # type() rather than isinstance(), so bool and str/int enum members are refused too.
+    if not all(type(member) in (str, int) for member in members):
+        log.error("field '%s' is a Literal with members other than str and int", key)
+        raise ConfigInvalidError(f"field '{key}' is a Literal with members other than str and int")
+    return members
+
+
 def _op_field_name_to_lower_snake_case(name: str) -> str:
     """Convert 1Password field name to lower_snake_case."""
     return name.replace("-", "_").lower()
@@ -277,6 +283,32 @@ def _parse_bool(str_val: str) -> bool:
         return False
     else:
         raise ValueError(f"cannot parse '{str_val}' as boolean")
+
+
+def _parse_literal(str_val: str, *, members: tuple[str | int, ...], key: str) -> str | int:
+    """Parse a Literal field by matching the value against each member's string form."""
+    for member in members:
+        if str(member) == str_val:
+            return member
+    allowed = ", ".join(repr(member) for member in members)
+    log.error("field '%s' must be one of %s", key, allowed)
+    raise ConfigInvalidError(f"field '{key}' must be one of {allowed}")
+
+
+def _parse_value(str_val: str, *, origin: type, key: str) -> Any:
+    """Parse a field value into an instance of its annotated class."""
+    try:
+        if issubclass(origin, (dict, list, set, tuple)):
+            return origin(loads(str_val))
+        if issubclass(origin, bool):
+            return _parse_bool(str_val)
+        return origin(str_val)
+    except JSONDecodeError as jde:
+        log.error("failed to parse field '%s' as JSON: %s", key, str(jde))
+        raise ConfigInvalidError(f"failed to parse field '{key}' as JSON") from jde
+    except (TypeError, ValueError) as exc:
+        log.error("failed to parse field '%s' as %s: %s", key, origin.__name__, str(exc))
+        raise ConfigInvalidError(f"failed to parse field '{key}' as {origin.__name__}") from exc
 
 
 @_retry()
@@ -318,6 +350,17 @@ async def _resolve_references(
                 f"1Password returned no result for secret reference(s): {', '.join(missing)}"
             )
         resolved = {ref: secrets.get(value, value) for ref, value in resolved.items()}
+
+
+def _unwrap_alias(cls: TypeForm[Any]) -> TypeForm[Any]:
+    """Resolve NewType and type statement aliases to the type they stand for."""
+    while isinstance(cls, (NewType, TypeAliasType)):
+        if isinstance(cls, NewType):
+            # typeshed types __supertype__ as type | NewType, though any type form is allowed.
+            cls = cast("TypeForm[Any]", cls.__supertype__)
+        else:
+            cls = cls.__value__
+    return cls
 
 
 def _unwrap_resolved(response: ResolveAllResponse) -> dict[str, str]:

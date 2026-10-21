@@ -111,7 +111,9 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
   - "true", "1", "yes", and "on" are interpreted as `True`.
   - "false", "0", "no", and "off" are interpreted as `False`.
   - any other value for a field defined as `bool` will raise a `ValueError`.
-- Collections (`dict`, `list`, `set`) are loaded by interpreting the string value in 1Password as JSON and passing that object to the constructor. This means that a set can be constructed from what looks like a list, for example.
+- Collections (`dict`, `list`, `set`, `tuple`) are loaded by interpreting the string value in 1Password as JSON and passing that object to the constructor. This means that a set can be constructed from what looks like a list, for example. Typed collections such as `list[str]` or `dict[str, int]` work too; Pydantic validates the item types.
+- `Literal` fields with `str` or `int` members load the member whose string form equals the value in 1Password, so `level: Literal[1, 2]` reads `"2"` as `2`. Any other value is a `ConfigInvalidError` naming the allowed members. Literals with members of other types (e.g. `bool` or enum members) are refused.
+- `NewType` and `type` statement aliases (e.g. `UserId = NewType("UserId", str)`, `type Port = int`) load as the type they stand for. Parameterized aliases (`type Pair[T] = tuple[T, T]`) are not supported.
 - Any string starting with `op://` will be resolved recursively (up to a depth of 10 links).
   All references in the config item are resolved together, one batched request per level of
   nesting, so a schema with many referencing fields costs a handful of 1Password requests
@@ -130,7 +132,6 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
 
 ### Unsupported Features
 
-- Typed collections are sadly not supported, because it confuses the `issubclass` matching of fields. This means that fields in your config model must be defined as e.g. plain `dict`, not `dict[str, str]`.
 - `Optional` and `Union` fields are **not** supported, i.e. you cannot do either of
 
   ```python
@@ -150,7 +151,7 @@ Every failure `load_config` reports about 1Password or the config item derives f
 | Exception | Meaning | What a caller should do |
 | --- | --- | --- |
 | `ConfigUnavailableError` | 1Password could not be reached or would not answer: authentication failure, network or TLS error, rate limiting, an empty vault or item listing, or a reference that could not be resolved. | The config that is there may well be fine. A service that keeps a last-good config snapshot may boot from it rather than fail. |
-| `ConfigInvalidError` | The item was read, but does not fit the schema: a field with no value and no default, a value that will not parse as its annotated type, malformed JSON in a collection field, a Pydantic validation failure, or a reference chain deeper than 10 links. | Fail loudly. Retrying and falling back to an older snapshot both serve stale config over a real, unfixed error; someone has to correct the 1Password item or the schema. |
+| `ConfigInvalidError` | The item was read, but does not fit the schema: a field with no value and no default, a value that will not parse as its annotated type, a field type Configator cannot load, malformed JSON in a collection field, a Pydantic validation failure, or a reference chain deeper than 10 links. | Fail loudly. Retrying and falling back to an older snapshot both serve stale config over a real, unfixed error; someone has to correct the 1Password item or the schema. |
 
 An empty vault or item listing counts as *unavailable* rather than *invalid*, because a de-permissioned or rotated service-account token looks exactly like a vault that is not there.
 
