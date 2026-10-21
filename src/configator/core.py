@@ -7,16 +7,27 @@
 # License-Filename: LICENSE.md                                                                    #
 ###################################################################################################
 
-from collections.abc import Awaitable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from functools import partial
 from importlib.metadata import version
 from json import JSONDecodeError, loads
-from typing import Any, Literal, NewType, TypeAliasType, cast, get_args, get_origin
+from types import NoneType, UnionType
+from typing import (
+    Annotated,
+    Any,
+    Literal,
+    NewType,
+    TypeAliasType,
+    Union,
+    cast,
+    get_args,
+    get_origin,
+)
 
 from onepassword.client import Client as OnePasswordClient
 from onepassword.errors import RateLimitExceededException
 from onepassword.types import Item, ItemField, ItemOverview, ResolveAllResponse, VaultOverview
-from pydantic import BaseModel, SecretStr, ValidationError
+from pydantic import BaseModel, SecretStr, TypeAdapter, ValidationError
 from pydantic.fields import PydanticUndefined
 from stamina import retry
 from typing_extensions import TypeForm
@@ -195,21 +206,13 @@ def _hydrate_field(
 ) -> Any:
     """Hydrate single field from 1Password item."""
     cls = _unwrap_alias(cls)
-    # Parameterized generics (e.g. list[str]) are not classes, so resolve them to their
-    # origin before any issubclass() check; non-generic annotations are their own origin.
     origin = get_origin(cls) or cls
-    if origin is Literal:
-        parse = partial(_parse_literal, members=_literal_members(cls, key))
-    elif isinstance(origin, type):
-        if issubclass(origin, BaseModel):
-            sections = _get_sections(item)
-            return _hydrate_model(
-                resolved=resolved, schema=origin, item=item, section_id=sections[key.lower()]
-            )
-        parse = partial(_parse_value, origin=origin)
-    else:
-        log.error("field '%s' has unsupported type %r", key, cls)
-        raise ConfigInvalidError(f"field '{key}' has unsupported type {cls!r}")
+    if isinstance(origin, type) and issubclass(origin, BaseModel):
+        sections = _get_sections(item)
+        return _hydrate_model(
+            resolved=resolved, schema=origin, item=item, section_id=sections[key.lower()]
+        )
+    parse = _parser(cls, key)
 
     matcher = partial(_field_matcher, title=key.lower(), section_id=section_id)
     wet_field = next(filter(matcher, item.fields), None)
@@ -220,7 +223,12 @@ def _hydrate_field(
         log.debug("using default value for field '%s'", key)
         return default
 
-    return parse(resolved.get(wet_field.value, wet_field.value), key=key)
+    try:
+        return parse(resolved.get(wet_field.value, wet_field.value))
+    except ConfigInvalidError as exc:
+        # Parsers raise without logging, so a union can try its members quietly.
+        log.error("%s", exc if exc.__cause__ is None else f"{exc}: {exc.__cause__}")
+        raise
 
 
 def _hydrate_model[T: BaseModel](
@@ -291,8 +299,32 @@ def _parse_literal(str_val: str, *, members: tuple[str | int, ...], key: str) ->
         if str(member) == str_val:
             return member
     allowed = ", ".join(repr(member) for member in members)
-    log.error("field '%s' must be one of %s", key, allowed)
     raise ConfigInvalidError(f"field '{key}' must be one of {allowed}")
+
+
+def _parse_union(
+    str_val: str,
+    *,
+    members: tuple[tuple[str, Callable[[str], Any], TypeAdapter[Any]], ...],
+    optional: bool,
+    key: str,
+) -> Any:
+    """Parse a union field as its first member, in declaration order, that accepts the value.
+
+    A member accepts the value when it parses and the result passes that member's own
+    validation; otherwise list[int] would take ["a"], and the schema-wide validation would
+    then pick whichever member Pydantic's smart union prefers. An empty value makes an
+    optional field None.
+    """
+    if optional and str_val == "":
+        return None
+    for _, parse, adapter in members:
+        try:
+            return adapter.validate_python(parse(str_val))
+        except (ConfigInvalidError, ValidationError):
+            continue
+    names = ", ".join(name for name, _, _ in members)
+    raise ConfigInvalidError(f"field '{key}' does not parse as any of {names}")
 
 
 def _parse_value(str_val: str, *, origin: type, key: str) -> Any:
@@ -304,11 +336,43 @@ def _parse_value(str_val: str, *, origin: type, key: str) -> Any:
             return _parse_bool(str_val)
         return origin(str_val)
     except JSONDecodeError as jde:
-        log.error("failed to parse field '%s' as JSON: %s", key, str(jde))
         raise ConfigInvalidError(f"failed to parse field '{key}' as JSON") from jde
     except (TypeError, ValueError) as exc:
-        log.error("failed to parse field '%s' as %s: %s", key, origin.__name__, str(exc))
         raise ConfigInvalidError(f"failed to parse field '{key}' as {origin.__name__}") from exc
+
+
+def _parser(cls: TypeForm[Any], key: str) -> Callable[[str], Any]:
+    """Return a function that parses a 1Password value into the annotated type.
+
+    Annotations the hydrator cannot build are refused here, before any value is read.
+    """
+    cls = _unwrap_alias(cls)
+    # Parameterized generics (e.g. list[str]) are not classes, so resolve them to their
+    # origin before any issubclass() check; non-generic annotations are their own origin.
+    origin = get_origin(cls) or cls
+    if origin is Literal:
+        return partial(_parse_literal, members=_literal_members(cls, key), key=key)
+    if origin is Union or origin is UnionType:
+        args = get_args(cls)
+        members = tuple(
+            (
+                arg.__name__ if isinstance(arg, type) else repr(arg),
+                _parser(arg, key),
+                TypeAdapter(arg),
+            )
+            for arg in args
+            if arg is not NoneType
+        )
+        return partial(_parse_union, members=members, optional=NoneType in args, key=key)
+    if not isinstance(origin, type):
+        log.error("field '%s' has unsupported type %r", key, cls)
+        raise ConfigInvalidError(f"field '{key}' has unsupported type {cls!r}")
+    if issubclass(origin, BaseModel):
+        log.error("field '%s' puts a section in a union, which is not supported", key)
+        raise ConfigInvalidError(
+            f"field '{key}' puts a section in a union, which is not supported"
+        )
+    return partial(_parse_value, origin=origin, key=key)
 
 
 @_retry()
@@ -353,14 +417,20 @@ async def _resolve_references(
 
 
 def _unwrap_alias(cls: TypeForm[Any]) -> TypeForm[Any]:
-    """Resolve NewType and type statement aliases to the type they stand for."""
-    while isinstance(cls, (NewType, TypeAliasType)):
-        if isinstance(cls, NewType):
+    """Resolve NewType, type statement aliases and Annotated to the type they stand for.
+
+    Pydantic strips Annotated from a field's own annotation, but not from union members.
+    """
+    while True:
+        if get_origin(cls) is Annotated:
+            cls = get_args(cls)[0]
+        elif isinstance(cls, NewType):
             # typeshed types __supertype__ as type | NewType, though any type form is allowed.
             cls = cast("TypeForm[Any]", cls.__supertype__)
-        else:
+        elif isinstance(cls, TypeAliasType):
             cls = cls.__value__
-    return cls
+        else:
+            return cls
 
 
 def _unwrap_resolved(response: ResolveAllResponse) -> dict[str, str]:

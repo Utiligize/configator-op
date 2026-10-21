@@ -2,7 +2,7 @@
 
 from json import JSONDecodeError
 from logging import DEBUG
-from typing import Any, Literal, NewType
+from typing import Annotated, Any, Literal, NewType, Optional
 from unittest.mock import AsyncMock, patch
 
 from onepassword.errors import RateLimitExceededException
@@ -132,6 +132,36 @@ class GenericAliasConfig(BaseModel):
     """Schema with a parameterized type statement alias, which is not a class."""
 
     pair: Pair[int]
+
+
+class OptionalConfig(BaseModel):
+    """Schema with Optional and Union fields."""
+
+    name: str | None
+    count: Optional[int]  # typing.Optional has a different origin than X | None on 3.12/3.13
+    hosts: list[str] | None = None
+    timeout: int | None = 30
+    port: int | str = 0
+    mode: Literal["fast", "safe"] | None = None
+
+
+class UnmatchedUnionConfig(BaseModel):
+    """Schema with a union no 1Password string outside its members can satisfy."""
+
+    number: int | float
+
+
+class SectionUnionConfig(BaseModel):
+    """Schema with a nested section inside a union."""
+
+    section: SectionConfig | None = None
+
+
+class ValidatedUnionConfig(BaseModel):
+    """Schema whose union members only differ once their items or constraints are validated."""
+
+    ids: list[int] | list[str]
+    level: Annotated[int, Field(gt=0)] | str
 
 
 class DevModeAlpha(ConfigatorSettings):
@@ -1321,6 +1351,100 @@ def test_hydrate_model_unsupported_annotation_is_invalid():
 
     with pytest.raises(ConfigInvalidError, match="field 'pair' has unsupported type"):
         _hydrate_model(resolved={}, schema=GenericAliasConfig, item=item)
+
+
+def test_hydrate_model_optional_fields():
+    """Test that Optional and Union fields hydrate as the member that parses."""
+    item = _item_with_fields(
+        name="svc", count="4", hosts='["a", "b"]', timeout="60", port="8080", mode="safe"
+    )
+
+    result = _hydrate_model(resolved={}, schema=OptionalConfig, item=item)
+
+    assert result.name == "svc"
+    assert result.count == 4
+    assert result.hosts == ["a", "b"]
+    assert result.timeout == 60
+    assert result.port == 8080
+    assert result.mode == "safe"
+
+
+def test_hydrate_model_optional_empty_value_is_none():
+    """Test that an empty value makes an optional field None, even over a non-None default."""
+    item = _item_with_fields(name="", count="", hosts="", timeout="", mode="")
+
+    result = _hydrate_model(resolved={}, schema=OptionalConfig, item=item)
+
+    assert result.name is None
+    assert result.count is None
+    assert result.hosts is None
+    assert result.timeout is None
+    assert result.mode is None
+
+
+def test_hydrate_model_optional_absent_uses_default():
+    """Test that an absent optional field falls back to its default."""
+    result = _hydrate_model(
+        resolved={}, schema=OptionalConfig, item=_item_with_fields(name="svc", count="1")
+    )
+
+    assert result.hosts is None
+    assert result.timeout == 30
+    assert result.port == 0
+
+
+def test_hydrate_model_optional_absent_without_default_is_invalid():
+    """Test that an absent optional field with no default still reads as a misconfiguration."""
+    item = _item_with_fields(name="svc")
+
+    with pytest.raises(ConfigInvalidError, match="field 'count' not found and no default"):
+        _hydrate_model(resolved={}, schema=OptionalConfig, item=item)
+
+
+def test_hydrate_model_union_declaration_order():
+    """Test that a union takes the first member, in declaration order, that parses."""
+    item = _item_with_fields(name="svc", count="1", port="http")
+
+    with capture_logs() as events:
+        result = _hydrate_model(resolved={}, schema=OptionalConfig, item=item)
+
+    assert result.port == "http"
+    assert [e for e in events if e["log_level"] == "error"] == []
+
+
+@pytest.mark.parametrize(
+    ("ids", "level", "expected_ids", "expected_level"),
+    [
+        ('["1"]', "5", [1], 5),
+        ('["a"]', "-1", ["a"], "-1"),
+    ],
+)
+def test_hydrate_model_union_member_is_validated(ids, level, expected_ids, expected_level):
+    """Test that a union member must pass its own validation, not just construct, to be taken."""
+    item = _item_with_fields(ids=ids, level=level)
+
+    result = _hydrate_model(resolved={}, schema=ValidatedUnionConfig, item=item)
+
+    assert result.ids == expected_ids
+    assert result.level == expected_level
+
+
+def test_hydrate_model_union_without_matching_member_is_invalid():
+    """Test that a value no union member parses reads as a misconfiguration."""
+    item = _item_with_fields(number="many")
+
+    with pytest.raises(
+        ConfigInvalidError, match="field 'number' does not parse as any of int, float"
+    ):
+        _hydrate_model(resolved={}, schema=UnmatchedUnionConfig, item=item)
+
+
+def test_hydrate_model_section_in_union_is_invalid():
+    """Test that a nested section inside a union is refused before any value is read."""
+    item = _item_with_fields()
+
+    with pytest.raises(ConfigInvalidError, match="field 'section' puts a section in a union"):
+        _hydrate_model(resolved={}, schema=SectionUnionConfig, item=item)
 
 
 def test_hydrate_model_validation_failure_is_invalid():

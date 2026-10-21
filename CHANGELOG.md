@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - feat: support Python 3.15 ([2b2a867])
 - feat: support Literal, NewType and type alias fields ([3d05790])
+- feat: support Optional and Union fields ([3cb7d98])
 
 ## [3000.7.2] - 2026-10-01
 
@@ -240,6 +241,7 @@ Initial release.
 [2fbb13e]: https://github.com/Utiligize/configator-op/commit/2fbb13e9ab59dd72fce7f8d70cde51398d75f814
 [387f552]: https://github.com/Utiligize/configator-op/commit/387f5525824ab4f6f2efde1d3b97c8758e3678d3
 [397b932]: https://github.com/Utiligize/configator-op/commit/397b9329e21509d89d965807807b388b49da5dc0
+[3cb7d98]: https://github.com/Utiligize/configator-op/commit/3cb7d980be2ee672a20f4f8daf547be9d38c0ade
 [3d05790]: https://github.com/Utiligize/configator-op/commit/3d05790d88583ae27c394a422c267ab3b493d003
 [4de6b3e]: https://github.com/Utiligize/configator-op/commit/4de6b3e5bcc06d921f3c263dd692c5ecdf95762c
 [50b4692]: https://github.com/Utiligize/configator-op/commit/50b469283ea63937d8993c8b70aa1a164f32b55f
