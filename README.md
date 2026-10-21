@@ -114,6 +114,19 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
 - Collections (`dict`, `list`, `set`, `tuple`) are loaded by interpreting the string value in 1Password as JSON and passing that object to the constructor. This means that a set can be constructed from what looks like a list, for example. Typed collections such as `list[str]` or `dict[str, int]` work too; Pydantic validates the item types.
 - `Literal` fields with `str` or `int` members load the member whose string form equals the value in 1Password, so `level: Literal[1, 2]` reads `"2"` as `2`. Any other value is a `ConfigInvalidError` naming the allowed members. Literals with members of other types (e.g. `bool` or enum members) are refused.
 - `NewType` and `type` statement aliases (e.g. `UserId = NewType("UserId", str)`, `type Port = int`) load as the type they stand for. Parameterized aliases (`type Pair[T] = tuple[T, T]`) are not supported.
+- Optional and union fields (`str | None`, `Optional[int]`, `int | str`) are supported:
+  - An optional field loads exactly like its inner type when the value in 1Password is non-empty.
+  - An **empty** value in 1Password makes an optional field `None`, even if the schema gives it a non-`None` default. This lets the 1Password item switch a setting off. A field that is **absent** from the item still falls back to its default, and without a default it is still a `ConfigInvalidError`.
+  - A union of several types tries them **in the order they are declared** and takes the first that parses, using the same parsing rules as a plain field of that type (JSON for collections, the 8 boolean strings for `bool`, member matching for `Literal`). Put the most specific type first: `port: int | str` reads `"8080"` as `8080`, but `port: str | int` reads it as `"8080"`, because a `str` accepts anything.
+  - If no member parses the value, loading fails with a `ConfigInvalidError` naming the types tried.
+
+  ```python
+  class AppConfig(BaseModel):
+      timeout: int | None = 30  # absent: 30, empty: None, "60": 60
+      hosts: list[str] | None = None  # '["a", "b"]': ["a", "b"]
+      port: int | str = 8080  # "9000": 9000, "http": "http"
+  ```
+
 - Any string starting with `op://` will be resolved recursively (up to a depth of 10 links).
   All references in the config item are resolved together, one batched request per level of
   nesting, so a schema with many referencing fields costs a handful of 1Password requests
@@ -132,15 +145,7 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
 
 ### Unsupported Features
 
-- `Optional` and `Union` fields are **not** supported, i.e. you cannot do either of
-
-  ```python
-  foo: str | None = None
-  bar: Optional[str]
-  baz: int | float
-  ```
-
-  because it confuses the hydrator, who won't know which constructor to call or will try to initialize `None`.
+- A nested model (section) inside a union, e.g. `database: DatabaseConfig | None`, is not supported and fails with a `ConfigInvalidError`, because a section is either in the 1Password item or not.
 - While `default` values are supported, `default_factory` is not.
 - Basic Python types `bytes` and `bytearray` may work but are not officially supported.
 

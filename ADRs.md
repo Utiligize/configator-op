@@ -17,6 +17,7 @@
 - [ADR-012: Batch op:// reference resolution](#adr-012-batch-op-reference-resolution)
 - [ADR-013: Retry 1Password calls, but never a rate limit](#adr-013-retry-1password-calls-but-never-a-rate-limit)
 - [ADR-014: Split failures into unavailable and invalid](#adr-014-split-failures-into-unavailable-and-invalid)
+- [ADR-015: Hydrate optional and union fields by declaration order](#adr-015-hydrate-optional-and-union-fields-by-declaration-order)
 
 ## ADR-001: Use Structlog for logging
 
@@ -651,3 +652,51 @@ would invite a caller to catch and handle it.
 - Developer impact
   - No change to the `load_config` signature or to schema definitions.
   - Tests asserting on failure paths assert on the exception type rather than the message.
+
+## ADR-015: Hydrate optional and union fields by declaration order
+
+**Date:** 2026-10-22
+
+**Context:**
+
+1Password stores every field value as a string, and the hydrator builds each value by calling
+the annotated type's constructor (see ADR-008 for booleans). A union annotation such as
+`int | None` or `int | str` has no single constructor, so these fields failed to load whenever
+1Password held a value. Optional settings are common, and schemas worked around the gap with
+plain types and sentinel defaults. Two choices are not obvious and callers rely on both: what an
+empty value means for an optional field, and which member of a union a string becomes.
+
+**Decision:**
+
+- An empty value in 1Password makes an optional field (`X | None`) `None`, whatever the
+  schema's default. A field absent from the item still falls back to its default.
+- A union tries its non-`None` members in declaration order with the same parsing a plain field
+  of that type gets (JSON collections, ADR-008 booleans, `Literal` matching), and takes the first
+  that parses. If none parses, the field is a `ConfigInvalidError`.
+- A nested model (section) inside a union is refused up front.
+- The final Pydantic validation of the whole schema remains the last word on every value.
+
+Deferring to Pydantic's smart-union validation was rejected: it would skip Configator's JSON and
+boolean parsing inside unions, so `bool | None` would accept Pydantic's wider set of boolean
+strings while `bool` accepts only the 8 from ADR-008.
+
+**Consequences:**
+
+- Benefits
+  - Optional settings can be declared as `X | None` instead of with sentinel defaults.
+  - An empty value lets the 1Password item switch a setting off without a schema change.
+  - Union parsing is predictable from the schema alone, and follows the same rules as plain fields.
+
+- Costs / Trade-offs
+  - An optional `str` field cannot hold an empty string; empty always means `None`.
+  - Member order matters: `str | int` never yields an `int`, because a `str` accepts any value.
+  - Each member that fails before one succeeds costs a parse attempt; negligible at config sizes.
+
+- Operational considerations
+  - Clearing a value in 1Password is now meaningful for optional fields: it sets them to `None`
+    rather than leaving the default in place.
+
+- Developer impact
+  - Put the most specific member of a union first.
+  - Parsers raise without logging; `_hydrate_field` logs the failure once, so a union's failed
+    member attempts do not produce error logs.
