@@ -1298,8 +1298,10 @@ def test_hydrate_model_literal_out_of_set_is_invalid():
 
 def test_hydrate_model_bool_literal_is_invalid():
     """Test that a Literal with a bool member is rejected before any value is parsed."""
+    item = _item_with_fields()
+
     with pytest.raises(ConfigInvalidError, match="field 'strict' is a Literal with members"):
-        _hydrate_model(resolved={}, schema=BoolLiteralConfig, item=_item_with_fields())
+        _hydrate_model(resolved={}, schema=BoolLiteralConfig, item=item)
 
 
 def test_hydrate_model_aliases():
