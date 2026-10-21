@@ -186,7 +186,7 @@ async def _get_vault_overview(
 def _hydrate_field(
     *,
     resolved: Mapping[str, str],
-    cls: type,
+    cls: Any,
     item: Item,
     key: str,
     default: Any,
