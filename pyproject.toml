@@ -102,11 +102,8 @@ dev = [
 
 [tool.uv]
 required-version = ">=0.13.4"
-# Lock nothing uploaded in the last 7 days, the same cooldown as Renovate's
-# minimumReleaseAge, which Renovate's monthly `uv lock --upgrade` does not apply.
-# Stored in uv.lock as a span and only re-evaluated on --upgrade/--refresh, so
-# `uv sync --locked` keeps working. A security fix younger than 7 days: add
-# `exclude-newer-package = { <name> = false }`, run
-# `uv lock --upgrade-package <name>`, and drop the entry once it is 7 days old.
+# Lock only packages older than 7 days. If you need younger packages, e.g.
+# for a security fix, add `exclude-newer-package = { <name> = false }` and
+# run `uv lock --upgrade-package <name>`
 exclude-newer = "7 days"
 package = true
