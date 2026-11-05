@@ -146,6 +146,30 @@ def test_postgres_config_dsn_without_rootcert_is_unchanged():
     assert actual == expected
 
 
+def test_postgres_config_dsn_empty_rootcert_is_unset(monkeypatch):
+    """Test that an empty PGSSLROOTCERT, e.g. from an env var, is treated as unset."""
+    with monkeypatch.context():
+        monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+        monkeypatch.setenv("PGSSLROOTCERT", "")
+        config = PostgresConfig(PGUSER="test_user", PGDATABASE="test_db", PGSSLMODE="verify-full")
+        assert config.PGSSLROOTCERT == ""
+        expected = "postgresql://test_user:hunter2@localhost:5432/test_db?sslmode=verify-full"
+        actual = str(config.dsn())
+        assert actual == expected
+
+
+def test_postgres_config_dsn_rootcert_system_ignores_empty_ssl_cert_file(
+    monkeypatch, no_system_ca_bundle, tmp_path
+):
+    """Test that `system` skips an empty SSL_CERT_FILE and probes the bundle paths."""
+    bundle = tmp_path / "probed.pem"
+    bundle.touch()
+    monkeypatch.setenv("SSL_CERT_FILE", "")
+    monkeypatch.setattr("configator.models._SYSTEM_CA_BUNDLES", (bundle,))
+    config = _pg_cfg_rootcert("system")
+    assert str(config.dsn()).endswith(f"&sslrootcert={bundle}")
+
+
 def test_postgres_config_dsn_rootcert_path_is_url_encoded():
     """Test that an explicit path is URL-encoded, spaces as %20 rather than +."""
     config = _pg_cfg_rootcert("/opt/my certs/ca+root.pem")

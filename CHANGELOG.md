@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- feat: PGSSLROOTCERT in the Postgres DSN, with system as the OS CA bundle ([d13649c])
+
 ## [3000.8.0] - 2026-10-22
 
 ### Added
@@ -295,6 +299,7 @@ Initial release.
 [bed3a2e]: https://github.com/Utiligize/configator-op/commit/bed3a2ee33150ba06adf0fe84d58b2106d72e14a
 [c420fde]: https://github.com/Utiligize/configator-op/commit/c420fde4172c22ab1e4b6772f0ac66d2e71344de
 [cff00cb]: https://github.com/Utiligize/configator-op/commit/cff00cb2ee15cad343ba5c455909455b3830e788
+[d13649c]: https://github.com/Utiligize/configator-op/commit/d13649c6b6a75bd178a9c35ad3531cf6383ddaa0
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
 [d7ae1b7]: https://github.com/Utiligize/configator-op/commit/d7ae1b778b7798f0cca0fa4aa3611008aaef6b29
 [d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953

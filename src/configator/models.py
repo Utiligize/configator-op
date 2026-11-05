@@ -104,7 +104,7 @@ class PostgresConfig(ConfigatorSettings):
     def _query(self) -> str:
         """Build the DSN query string shared by ``dsn()`` and ``dsn_redacted()``."""
         params = {"sslmode": str(self.PGSSLMODE)}
-        if self.PGSSLROOTCERT is not None:
+        if self.PGSSLROOTCERT:
             rootcert = self.PGSSLROOTCERT
             if rootcert == "system":
                 rootcert = _system_ca_bundle()
@@ -117,6 +117,9 @@ class PostgresConfig(ConfigatorSettings):
         WARNING: the returned DSN embeds the plaintext password and must never
         be logged, included in an exception, or sent to error-reporting tools.
         Use ``dsn_redacted()`` for any logging or diagnostic output.
+
+        Raises ``ConfigInvalidError`` when ``PGSSLROOTCERT`` is ``system`` and
+        no OS CA bundle is found.
         """
         return PostgresDsn.build(
             scheme=self.SCHEME,
@@ -134,6 +137,9 @@ class PostgresConfig(ConfigatorSettings):
         Safe to log or include in diagnostics; use this instead of ``dsn()``
         anywhere the value may be persisted or transmitted. Returns a plain
         ``str`` because the masked password makes it unusable as a real DSN.
+
+        Raises ``ConfigInvalidError`` when ``PGSSLROOTCERT`` is ``system`` and
+        no OS CA bundle is found.
         """
         return str(
             PostgresDsn.build(
