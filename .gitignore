@@ -154,6 +154,9 @@ cython_debug/
 # SSL files
 *.pem
 
+# SonarScanner
+.scannerwork/
+
 # IDEs and agents
 .claude
 .crush
