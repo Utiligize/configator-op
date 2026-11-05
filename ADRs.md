@@ -369,6 +369,14 @@ Provide common configuration models in `configator.models` module:
 
 These can be used directly or composed into larger configurations via nesting.
 
+`PostgresConfig.PGSSLROOTCERT` (default unset) adds `sslrootcert` to the DSN so services can use
+`verify-full`. The value `system` is resolved to the OS CA bundle path, because asyncpg treats it
+as a file name, unlike libpq 16+: `SSL_CERT_FILE` if set, else the first existing of a fixed
+probe list (Debian/Ubuntu, RHEL, Alpine/macOS paths). `ssl.get_default_verify_paths()` is not
+used, as its `cafile` is `None` on uv's python-build-standalone interpreters. If nothing is
+found, building the DSN raises `ConfigInvalidError` rather than leaving a TLS failure for
+connect time. Explicit paths are passed through unchecked.
+
 **Consequences:**
 
 - Benefits

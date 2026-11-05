@@ -149,6 +149,24 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
 - While `default` values are supported, `default_factory` is not.
 - Basic Python types `bytes` and `bytearray` may work but are not officially supported.
 
+## PostgreSQL
+
+`PostgresConfig` reads the libpq-style fields `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE` (default `require`) and `PGSSLROOTCERT` (default unset). `dsn()` builds the connection string; `dsn_redacted()` builds the same string with the password masked, for logging.
+
+`PGSSLROOTCERT` names the CA certificates to trust, which `verify-ca` and `verify-full` need:
+
+- Unset or empty: the DSN carries only `sslmode`.
+- A file path: added as `sslrootcert=<path>`, URL-encoded. Configator does not check that the file exists; the driver reports a missing file.
+- `system`: the OS CA bundle. Configator resolves it to a path, because asyncpg takes `system` as a file name, unlike libpq 16+. It uses `SSL_CERT_FILE` if that is non-empty, else the first of `/etc/ssl/certs/ca-certificates.crt` (Debian, Ubuntu), `/etc/pki/tls/certs/ca-bundle.crt` (RHEL) and `/etc/ssl/cert.pem` (Alpine, macOS) that is a regular file. If none does, `dsn()` and `dsn_redacted()` raise `ConfigInvalidError` naming the paths tried.
+
+```python
+from configator.models import PostgresConfig
+
+cfg = PostgresConfig(PGHOST="db.example.com", PGSSLMODE="verify-full", PGSSLROOTCERT="system")
+cfg.dsn_redacted()
+# 'postgresql://postgres:**********@db.example.com:5432/postgres?sslmode=verify-full&sslrootcert=/etc/ssl/certs/ca-certificates.crt'
+```
+
 ## Error Handling
 
 Every failure `load_config` reports about 1Password or the config item derives from `ConfigatorError`, so one `except` clause catches them all — the developer-mode production guard being the one deliberate exception, described at the end of this section. Below the base sit two types that answer the question a caller has to make a decision on — *is the config wrong, or is 1Password simply not answering?*

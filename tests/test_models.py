@@ -1,10 +1,12 @@
 from contextvars import Context
 from os import getenv
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from pydantic import SecretStr, ValidationError
 from structlog.testing import capture_logs
 
+from configator.errors import ConfigInvalidError
 from configator.models import PostgresConfig, SentryConfig
 
 
@@ -116,6 +118,129 @@ def test_postgres_config_sslmode_failed(monkeypatch):
         monkeypatch.setenv("PGSSLMODE", "cheese")
         with pytest.raises(ValidationError):
             _ = PostgresConfig()
+
+
+def _pg_cfg_rootcert(rootcert: str) -> PostgresConfig:
+    return PostgresConfig(
+        PGUSER="test_user",
+        PGDATABASE="test_db",
+        PGSSLMODE="verify-full",
+        PGSSLROOTCERT=rootcert,
+    )
+
+
+def _sslrootcert(dsn: object) -> str:
+    """Return the decoded sslrootcert query value of a DSN."""
+    values = parse_qs(urlsplit(str(dsn)).query)["sslrootcert"]
+    assert len(values) == 1
+    return values[0]
+
+
+@pytest.fixture
+def no_system_ca_bundle(monkeypatch, tmp_path):
+    """Point every system CA bundle probe path at a file that does not exist."""
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    missing = tuple(tmp_path / f"missing-{i}.pem" for i in range(3))
+    monkeypatch.setattr("configator.models._SYSTEM_CA_BUNDLES", missing)
+    return missing
+
+
+def test_postgres_config_dsn_without_rootcert_is_unchanged():
+    """Test that an unset PGSSLROOTCERT leaves only sslmode in the query."""
+    config = PostgresConfig(PGUSER="test_user", PGDATABASE="test_db", PGSSLMODE="verify-full")
+    assert config.PGSSLROOTCERT is None
+    expected = "postgresql://test_user:hunter2@localhost:5432/test_db?sslmode=verify-full"
+    actual = str(config.dsn())
+    assert actual == expected
+
+
+def test_postgres_config_dsn_empty_rootcert_is_unset(monkeypatch):
+    """Test that an empty PGSSLROOTCERT, e.g. from an env var, is treated as unset."""
+    with monkeypatch.context():
+        monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+        monkeypatch.setenv("PGUSER", "test_user")
+        monkeypatch.setenv("PGDATABASE", "test_db")
+        monkeypatch.setenv("PGSSLMODE", "verify-full")
+        monkeypatch.setenv("PGSSLROOTCERT", "")
+        config = PostgresConfig(PGUSER="test_user", PGDATABASE="test_db", PGSSLMODE="verify-full")
+        assert config.PGSSLROOTCERT == ""
+        expected = "postgresql://test_user:hunter2@localhost:5432/test_db?sslmode=verify-full"
+        actual = str(config.dsn())
+        assert actual == expected
+
+
+def test_postgres_config_dsn_rootcert_system_ignores_empty_ssl_cert_file(
+    monkeypatch, no_system_ca_bundle, tmp_path
+):
+    """Test that `system` skips an empty SSL_CERT_FILE and probes the bundle paths."""
+    bundle = tmp_path / "probed.pem"
+    bundle.touch()
+    monkeypatch.setenv("SSL_CERT_FILE", "")
+    monkeypatch.setattr("configator.models._SYSTEM_CA_BUNDLES", (bundle,))
+    config = _pg_cfg_rootcert("system")
+    assert _sslrootcert(config.dsn()) == str(bundle)
+
+
+def test_postgres_config_dsn_rootcert_path_is_url_encoded():
+    """Test that an explicit path is URL-encoded, spaces as %20 rather than +."""
+    config = _pg_cfg_rootcert("/opt/my certs/ca+root.pem")
+    expected = (
+        "postgresql://test_user:hunter2@localhost:5432/test_db"
+        "?sslmode=verify-full&sslrootcert=/opt/my%20certs/ca%2Broot.pem"
+    )
+    actual = str(config.dsn())
+    assert actual == expected
+
+
+def test_postgres_config_dsn_rootcert_path_is_not_checked_for_existence(no_system_ca_bundle):
+    """Test that an explicit path is passed through even if the file does not exist."""
+    config = _pg_cfg_rootcert("/nonexistent/ca.pem")
+    assert f"{config.dsn()}".endswith("&sslrootcert=/nonexistent/ca.pem")
+
+
+def test_postgres_config_dsn_rootcert_system_uses_ssl_cert_file(monkeypatch, tmp_path):
+    """Test that `system` resolves to SSL_CERT_FILE when it is set."""
+    bundle = tmp_path / "bundle.pem"
+    monkeypatch.setenv("SSL_CERT_FILE", str(bundle))
+    config = _pg_cfg_rootcert("system")
+    assert _sslrootcert(config.dsn()) == str(bundle)
+
+
+def test_postgres_config_dsn_rootcert_system_picks_first_existing_probe(
+    monkeypatch, no_system_ca_bundle, tmp_path
+):
+    """Test that `system` resolves to the first probe path that exists."""
+    second = tmp_path / "second.pem"
+    third = tmp_path / "third.pem"
+    second.touch()
+    third.touch()
+    monkeypatch.setattr(
+        "configator.models._SYSTEM_CA_BUNDLES", (no_system_ca_bundle[0], second, third)
+    )
+    config = _pg_cfg_rootcert("system")
+    assert _sslrootcert(config.dsn()) == str(second)
+
+
+def test_postgres_config_dsn_rootcert_system_not_found_raises(no_system_ca_bundle):
+    """Test that `system` with no bundle found raises ConfigInvalidError naming the paths."""
+    config = _pg_cfg_rootcert("system")
+    with pytest.raises(ConfigInvalidError) as exc_info:
+        config.dsn()
+    message = str(exc_info.value)
+    assert "SSL_CERT_FILE" in message
+    for path in no_system_ca_bundle:
+        assert str(path) in message
+
+
+def test_postgres_config_dsn_redacted_carries_rootcert(monkeypatch, tmp_path):
+    """Test that dsn_redacted() has the same sslrootcert as dsn(), with the password masked."""
+    bundle = tmp_path / "bundle.pem"
+    monkeypatch.setenv("SSL_CERT_FILE", str(bundle))
+    config = _pg_cfg_rootcert("system")
+    redacted = config.dsn_redacted()
+    assert "hunter2" not in redacted
+    assert redacted == f"{config.dsn()}".replace("hunter2", "**********")
+    assert _sslrootcert(redacted) == str(bundle)
 
 
 def test_sentry_env_prefix(monkeypatch):
