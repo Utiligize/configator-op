@@ -8,12 +8,16 @@
 ###################################################################################################
 
 from enum import StrEnum, unique
+from os import getenv
+from pathlib import Path
+from urllib.parse import quote, urlencode
 
 from pydantic import Field, HttpUrl, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from .environment import Environment as Environment
 from .environment import dev_mode_enabled, log_dev_mode_once, refuse_dev_mode_in_production
+from .errors import ConfigInvalidError
 
 
 class ConfigatorSettings(BaseSettings):
@@ -57,6 +61,34 @@ class _PostgresSSLMode(StrEnum):
     VERIFY_FULL = "verify-full"
 
 
+# Probed in order when PGSSLROOTCERT is "system" and SSL_CERT_FILE is unset.
+# ssl.get_default_verify_paths() is no help: its cafile is None on uv's
+# python-build-standalone interpreters.
+_SYSTEM_CA_BUNDLES: tuple[Path, ...] = (
+    Path("/etc/ssl/certs/ca-certificates.crt"),  # Debian, Ubuntu
+    Path("/etc/pki/tls/certs/ca-bundle.crt"),  # RHEL
+    Path("/etc/ssl/cert.pem"),  # Alpine, macOS
+)
+
+
+def _system_ca_bundle() -> str:
+    """Return the path of the OS CA bundle, for ``sslrootcert=system``.
+
+    asyncpg reads ``sslrootcert`` from the DSN but, unlike libpq 16+, takes
+    ``system`` as a file name, so Configator resolves it to a real path.
+    """
+    if cert_file := getenv("SSL_CERT_FILE"):
+        return cert_file
+    for bundle in _SYSTEM_CA_BUNDLES:
+        if bundle.is_file():
+            return str(bundle)
+    tried = ", ".join(str(bundle) for bundle in _SYSTEM_CA_BUNDLES)
+    raise ConfigInvalidError(
+        f"PGSSLROOTCERT is 'system' but no OS CA bundle was found; "
+        f"SSL_CERT_FILE is unset and none of these exist: {tried}"
+    )
+
+
 class PostgresConfig(ConfigatorSettings):
     """PostgreSQL configuration schema."""
 
@@ -66,7 +98,18 @@ class PostgresConfig(ConfigatorSettings):
     PGPASSWORD: SecretStr = SecretStr("hunter2")
     PGDATABASE: str = "postgres"
     PGSSLMODE: _PostgresSSLMode = _PostgresSSLMode("require")
+    PGSSLROOTCERT: str | None = None
     SCHEME: str = "postgresql"
+
+    def _query(self) -> str:
+        """Build the DSN query string shared by ``dsn()`` and ``dsn_redacted()``."""
+        params = {"sslmode": str(self.PGSSLMODE)}
+        if self.PGSSLROOTCERT is not None:
+            rootcert = self.PGSSLROOTCERT
+            if rootcert == "system":
+                rootcert = _system_ca_bundle()
+            params["sslrootcert"] = rootcert
+        return urlencode(params, safe="/", quote_via=quote)
 
     def dsn(self) -> PostgresDsn:
         """Build the PostgreSQL DSN string.
@@ -82,7 +125,7 @@ class PostgresConfig(ConfigatorSettings):
             host=self.PGHOST,
             port=self.PGPORT,
             path=f"{self.PGDATABASE}",
-            query=f"sslmode={self.PGSSLMODE}",
+            query=self._query(),
         )
 
     def dsn_redacted(self) -> str:
@@ -100,7 +143,7 @@ class PostgresConfig(ConfigatorSettings):
                 host=self.PGHOST,
                 port=self.PGPORT,
                 path=f"{self.PGDATABASE}",
-                query=f"sslmode={self.PGSSLMODE}",
+                query=self._query(),
             )
         )
 
