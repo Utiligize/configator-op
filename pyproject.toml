@@ -102,4 +102,8 @@ dev = [
 
 [tool.uv]
 required-version = ">=0.13.4"
+# Lock only packages older than 7 days. If you need younger packages, e.g.
+# for a security fix, add `exclude-newer-package = { <name> = false }` and
+# run `uv lock --upgrade-package <name>`
+exclude-newer = "7 days"
 package = true
