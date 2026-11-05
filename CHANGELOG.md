@@ -6,9 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3000.9.0] - 2026-11-05
+
 ### Added
 
-- feat: PGSSLROOTCERT in the Postgres DSN, with system as the OS CA bundle ([d13649c])
+- feat: PGSSLROOTCERT in the Postgres DSN, with system as the OS CA bundle ([f7f10ab])
+
+### Changed
+
+- chore: load .env with direnv ([1c23f1b])
+- chore(deps): lock nothing younger than 7 days ([0a67b34])
+- chore: ignore SonarScanner work directory ([67135ab])
+- chore(ci): Update all non-major updates ([dc04b7b])
+- chore(deps): Lock file maintenance ([7127dac])
 
 ## [3000.8.0] - 2026-10-22
 
@@ -222,7 +232,8 @@ Initial release.
 
 <!-- markdownlint-disable-file MD024 -->
 
-[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.8.0...HEAD
+[Unreleased]: https://github.com/Utiligize/configator-op/compare/v3000.9.0...HEAD
+[3000.9.0]: https://github.com/Utiligize/configator-op/compare/v3000.8.0...v3000.9.0
 [3000.8.0]: https://github.com/Utiligize/configator-op/compare/v3000.7.2...v3000.8.0
 [3000.7.2]: https://github.com/Utiligize/configator-op/compare/v3000.7.1...v3000.7.2
 [3000.7.1]: https://github.com/Utiligize/configator-op/compare/v3000.7.0...v3000.7.1
@@ -243,6 +254,7 @@ Initial release.
 [01b9485]: https://github.com/Utiligize/configator-op/commit/01b9485654832e82861cc8c7a390cc190f38daf4
 [03c114f]: https://github.com/Utiligize/configator-op/commit/03c114f08b5d0249bf2dfa4ad068871c43e89afb
 [04b8024]: https://github.com/Utiligize/configator-op/commit/04b80240e580628ac7a7b6bdb72035cadf6c3d83
+[0a67b34]: https://github.com/Utiligize/configator-op/commit/0a67b34301735e28351fca7adf57eea81c570f0f
 [0ddc16a]: https://github.com/Utiligize/configator-op/commit/0ddc16ac3e8e0637137bf93146630198215d6546
 [0efeae6]: https://github.com/Utiligize/configator-op/commit/0efeae6f81e3dbecc5fcaea0afb9e564e6017331
 [0f06f5d]: https://github.com/Utiligize/configator-op/commit/0f06f5dd44d54f23a0b76c9ae5d0412913de348b
@@ -250,6 +262,7 @@ Initial release.
 [15b1a43]: https://github.com/Utiligize/configator-op/commit/15b1a433c56a790715da5746d4beb50a7a1ca25d
 [168fe4f]: https://github.com/Utiligize/configator-op/commit/168fe4f088df17c34782a14a07d9b8ef78b16f2d
 [18f5bb9]: https://github.com/Utiligize/configator-op/commit/18f5bb9d1741cc91ffe88a56f9c0b4ea8e212972
+[1c23f1b]: https://github.com/Utiligize/configator-op/commit/1c23f1b1eb2dcbd849d79efdd51a3cbfc55db8e1
 [1e703ba]: https://github.com/Utiligize/configator-op/commit/1e703ba6cf51da6eebe3f536e2e84ae903fb96c8
 [21d2a5f]: https://github.com/Utiligize/configator-op/commit/21d2a5f7ce3c4f68bc8d702eca0cf34fa2d77d21
 [2aa9d2e]: https://github.com/Utiligize/configator-op/commit/2aa9d2e884ba7e99ecdd6cf73ef10f2721340cb9
@@ -268,11 +281,13 @@ Initial release.
 [5e8f6fe]: https://github.com/Utiligize/configator-op/commit/5e8f6fe07fe6a57e9177dcbd44f0f527cae6ae49
 [6026bdf]: https://github.com/Utiligize/configator-op/commit/6026bdf39955a68efa803a9a28b8133ce458c68e
 [6269c0b]: https://github.com/Utiligize/configator-op/commit/6269c0bbedd9819b672c0df25698e1544b23196e
+[67135ab]: https://github.com/Utiligize/configator-op/commit/67135abf57e5415ec8990cd77708966211ae22b8
 [6841d83]: https://github.com/Utiligize/configator-op/commit/6841d83439f77b919c00ff385940e8104fb546d6
 [6b80586]: https://github.com/Utiligize/configator-op/commit/6b80586d2f839520a5b9cba5ab74fdd10bef1bd1
 [6df3acd]: https://github.com/Utiligize/configator-op/commit/6df3acdef891c6b60b90ea96c128b317956b1671
 [6e1638a]: https://github.com/Utiligize/configator-op/commit/6e1638a25a49ebe8832ce60d10a9f08a20fef286
 [6e2571b]: https://github.com/Utiligize/configator-op/commit/6e2571bc009eb775d182c7a81493f9cf08ce8865
+[7127dac]: https://github.com/Utiligize/configator-op/commit/7127dacc81690dbafa46e262b72210dfd39e99c2
 [7243514]: https://github.com/Utiligize/configator-op/commit/72435140f8fbc0d59f39516efe5290a2828db513
 [7569cb8]: https://github.com/Utiligize/configator-op/commit/7569cb8540028800570513411a5ab5291ab45cc6
 [76d4594]: https://github.com/Utiligize/configator-op/commit/76d459490bc57f3261ca5561b60dfb8768eb3c7c
@@ -299,11 +314,11 @@ Initial release.
 [bed3a2e]: https://github.com/Utiligize/configator-op/commit/bed3a2ee33150ba06adf0fe84d58b2106d72e14a
 [c420fde]: https://github.com/Utiligize/configator-op/commit/c420fde4172c22ab1e4b6772f0ac66d2e71344de
 [cff00cb]: https://github.com/Utiligize/configator-op/commit/cff00cb2ee15cad343ba5c455909455b3830e788
-[d13649c]: https://github.com/Utiligize/configator-op/commit/d13649c6b6a75bd178a9c35ad3531cf6383ddaa0
 [d5b1eda]: https://github.com/Utiligize/configator-op/commit/d5b1eda3e53373bb3e69b46a3603ac1dff0f677c
 [d7ae1b7]: https://github.com/Utiligize/configator-op/commit/d7ae1b778b7798f0cca0fa4aa3611008aaef6b29
 [d88b173]: https://github.com/Utiligize/configator-op/commit/d88b173b1f7bb130b5d6e9a4c908328517562953
 [d92b3b8]: https://github.com/Utiligize/configator-op/commit/d92b3b8dd70a144154766bc20d71439886382b0f
+[dc04b7b]: https://github.com/Utiligize/configator-op/commit/dc04b7b93d4be0b728031f3fd1add3c544b0006f
 [e0991b6]: https://github.com/Utiligize/configator-op/commit/e0991b65e5508de5c94be1c340876fbd12fea414
 [e5a453a]: https://github.com/Utiligize/configator-op/commit/e5a453ac59fe11fbea083b9168289ef111424dc4
 [e9b89e5]: https://github.com/Utiligize/configator-op/commit/e9b89e5803473b165fd735b77fc75f71405e4ef5
@@ -314,6 +329,7 @@ Initial release.
 [f0202a6]: https://github.com/Utiligize/configator-op/commit/f0202a63b99d05ff2e2951c728574a71878a2f68
 [f18dfe9]: https://github.com/Utiligize/configator-op/commit/f18dfe9db79c03fe90cc27535b764e2b55af5942
 [f723cf2]: https://github.com/Utiligize/configator-op/commit/f723cf265a17cbbede4d65ca9eb9c408b3b66940
+[f7f10ab]: https://github.com/Utiligize/configator-op/commit/f7f10ab84d5f0759a1662f4437570abc8a68883b
 [fb0fd15]: https://github.com/Utiligize/configator-op/commit/fb0fd155f8b4c87a76ab6157b903778163505727
 [fbf6198]: https://github.com/Utiligize/configator-op/commit/fbf619848bcc59d105543b625b57899039d3fc89
 [fccaa88]: https://github.com/Utiligize/configator-op/commit/fccaa88d0f869a204fcc0af0a0340b8cc1577dc7
