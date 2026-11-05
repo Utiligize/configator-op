@@ -158,6 +158,9 @@ def test_postgres_config_dsn_empty_rootcert_is_unset(monkeypatch):
     """Test that an empty PGSSLROOTCERT, e.g. from an env var, is treated as unset."""
     with monkeypatch.context():
         monkeypatch.setenv("CONFIGATOR_DEV_MODE", "1")
+        monkeypatch.setenv("PGUSER", "test_user")
+        monkeypatch.setenv("PGDATABASE", "test_db")
+        monkeypatch.setenv("PGSSLMODE", "verify-full")
         monkeypatch.setenv("PGSSLROOTCERT", "")
         config = PostgresConfig(PGUSER="test_user", PGDATABASE="test_db", PGSSLMODE="verify-full")
         assert config.PGSSLROOTCERT == ""
