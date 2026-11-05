@@ -1,5 +1,6 @@
 from contextvars import Context
 from os import getenv
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from pydantic import SecretStr, ValidationError
@@ -128,6 +129,13 @@ def _pg_cfg_rootcert(rootcert: str) -> PostgresConfig:
     )
 
 
+def _sslrootcert(dsn: object) -> str:
+    """Return the decoded sslrootcert query value of a DSN."""
+    values = parse_qs(urlsplit(str(dsn)).query)["sslrootcert"]
+    assert len(values) == 1
+    return values[0]
+
+
 @pytest.fixture
 def no_system_ca_bundle(monkeypatch, tmp_path):
     """Point every system CA bundle probe path at a file that does not exist."""
@@ -167,7 +175,7 @@ def test_postgres_config_dsn_rootcert_system_ignores_empty_ssl_cert_file(
     monkeypatch.setenv("SSL_CERT_FILE", "")
     monkeypatch.setattr("configator.models._SYSTEM_CA_BUNDLES", (bundle,))
     config = _pg_cfg_rootcert("system")
-    assert str(config.dsn()).endswith(f"&sslrootcert={bundle}")
+    assert _sslrootcert(config.dsn()) == str(bundle)
 
 
 def test_postgres_config_dsn_rootcert_path_is_url_encoded():
@@ -192,7 +200,7 @@ def test_postgres_config_dsn_rootcert_system_uses_ssl_cert_file(monkeypatch, tmp
     bundle = tmp_path / "bundle.pem"
     monkeypatch.setenv("SSL_CERT_FILE", str(bundle))
     config = _pg_cfg_rootcert("system")
-    assert f"{config.dsn()}".endswith(f"&sslrootcert={bundle}")
+    assert _sslrootcert(config.dsn()) == str(bundle)
 
 
 def test_postgres_config_dsn_rootcert_system_picks_first_existing_probe(
@@ -207,7 +215,7 @@ def test_postgres_config_dsn_rootcert_system_picks_first_existing_probe(
         "configator.models._SYSTEM_CA_BUNDLES", (no_system_ca_bundle[0], second, third)
     )
     config = _pg_cfg_rootcert("system")
-    assert f"{config.dsn()}".endswith(f"&sslrootcert={second}")
+    assert _sslrootcert(config.dsn()) == str(second)
 
 
 def test_postgres_config_dsn_rootcert_system_not_found_raises(no_system_ca_bundle):
@@ -229,7 +237,7 @@ def test_postgres_config_dsn_redacted_carries_rootcert(monkeypatch, tmp_path):
     redacted = config.dsn_redacted()
     assert "hunter2" not in redacted
     assert redacted == f"{config.dsn()}".replace("hunter2", "**********")
-    assert redacted.endswith(f"&sslrootcert={bundle}")
+    assert _sslrootcert(redacted) == str(bundle)
 
 
 def test_sentry_env_prefix(monkeypatch):

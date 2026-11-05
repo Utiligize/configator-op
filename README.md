@@ -157,7 +157,7 @@ Nested models are loaded from separate sections in the 1Password item. Fields in
 
 - Unset or empty: the DSN carries only `sslmode`.
 - A file path: added as `sslrootcert=<path>`, URL-encoded. Configator does not check that the file exists; the driver reports a missing file.
-- `system`: the OS CA bundle. Configator resolves it to a path, because asyncpg takes `system` as a file name, unlike libpq 16+. It uses `SSL_CERT_FILE` if set, else the first of `/etc/ssl/certs/ca-certificates.crt` (Debian, Ubuntu), `/etc/pki/tls/certs/ca-bundle.crt` (RHEL) and `/etc/ssl/cert.pem` (Alpine, macOS) that exists. If none does, `dsn()` and `dsn_redacted()` raise `ConfigInvalidError` naming the paths tried.
+- `system`: the OS CA bundle. Configator resolves it to a path, because asyncpg takes `system` as a file name, unlike libpq 16+. It uses `SSL_CERT_FILE` if that is non-empty, else the first of `/etc/ssl/certs/ca-certificates.crt` (Debian, Ubuntu), `/etc/pki/tls/certs/ca-bundle.crt` (RHEL) and `/etc/ssl/cert.pem` (Alpine, macOS) that is a regular file. If none does, `dsn()` and `dsn_redacted()` raise `ConfigInvalidError` naming the paths tried.
 
 ```python
 from configator.models import PostgresConfig
