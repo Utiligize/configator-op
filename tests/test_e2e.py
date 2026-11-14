@@ -46,7 +46,7 @@ async def test_load_config():
         VALUES=ValuesConfig(
             a_string="foo",
             an_integer=42,
-            a_reference="mixpanel",
+            a_reference="hunter2",
             a_complex=complex(real=-1.23, imag=4.5),
             a_decimal=Decimal("0.1"),
             a_float=0.1,
