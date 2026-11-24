@@ -1,5 +1,6 @@
 """Unit tests for Configator core functionality."""
 
+from asyncio import CancelledError
 from json import JSONDecodeError
 from logging import DEBUG
 from typing import Annotated, Any, Literal, NewType, Optional
@@ -383,6 +384,12 @@ def test_is_transient_rate_limit():
 def test_is_transient_other_error():
     """Test that any other error is retried."""
     assert _is_transient(Exception("connection reset")) is True
+
+
+@pytest.mark.parametrize("exc", [CancelledError(), KeyboardInterrupt(), SystemExit()])
+def test_is_transient_base_exception(exc: BaseException):
+    """Test that cancellation and interpreter exits are never retried."""
+    assert _is_transient(exc) is False
 
 
 @pytest.mark.asyncio

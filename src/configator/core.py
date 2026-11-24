@@ -53,13 +53,18 @@ _RETRY_WAIT_INITIAL = 0.2
 _RETRY_WAIT_MAX = 2.0
 
 
-def _is_transient(exc: Exception) -> bool:
+def _is_transient(exc: BaseException) -> bool:
     """Return True for errors worth retrying; a rate limit never is.
 
     A rate-limited response reports no usable retry-after and the hourly read
     budget can be up to an hour from resetting, so every retry is another
     request spent against a budget that is already empty.
+
+    stamina also hands over cancellation and interpreter exits, which must
+    propagate at once.
     """
+    if not isinstance(exc, Exception):
+        return False
     if isinstance(exc, RateLimitExceededException):
         log.error("1Password rate limit exceeded; not retrying: %s", str(exc))
         return False

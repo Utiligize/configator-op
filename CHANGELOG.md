@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- fix: never retry cancellation or interpreter exit ([b2a62fc])
+
 ## [3000.9.0] - 2026-11-05
 
 ### Added
@@ -307,6 +311,7 @@ Initial release.
 [99405f2]: https://github.com/Utiligize/configator-op/commit/99405f2b6fd941be0db12201c4a44c0c065babcb
 [9e302e2]: https://github.com/Utiligize/configator-op/commit/9e302e207124fdabdbbf3a358dcb971d9edf7e9c
 [af8a42b]: https://github.com/Utiligize/configator-op/commit/af8a42bb59c2767724102d2a85d8f191ff53620d
+[b2a62fc]: https://github.com/Utiligize/configator-op/commit/b2a62fcfb75b6a0e066962f1b9ac8141fb33ee95
 [b2a90f8]: https://github.com/Utiligize/configator-op/commit/b2a90f8d6a87ee0aee70e38204866b011b6232fe
 [bbd0e5c]: https://github.com/Utiligize/configator-op/commit/bbd0e5c699b6d16e0c7fa027970a90787db35b78
 [bd2994a]: https://github.com/Utiligize/configator-op/commit/bd2994a26c44b0036d96ea0b1b28be0862a2597d
